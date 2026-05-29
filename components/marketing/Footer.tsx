@@ -1,4 +1,4 @@
-import { BUSINESS, UST_CLAUSE } from "@/config/legal";
+import { BUSINESS } from "@/config/legal";
 
 export function Footer() {
   return (
@@ -59,18 +59,11 @@ export function Footer() {
           </nav>
         </div>
 
-        {/* Impressum + locked §19 UStG clause — legally required, do not remove. */}
+        {/* Full Impressum (address, St.-Nr., §19 UStG clause) lives on /impressum,
+            reachable via the "Impressum" link above. Kept out of the footer per
+            owner request — §5 TMG only requires it to be easily reachable. */}
         <div className="mt-12 border-t border-line pt-6 text-sm text-zinc-600">
-          <p>
-            © {new Date().getFullYear()} {BUSINESS.brand} · {BUSINESS.legalName}
-          </p>
-          <p className="mt-1">
-            {BUSINESS.street} · {BUSINESS.city} · {BUSINESS.country}
-          </p>
-          <p className="mt-1">
-            St.-Nr. {BUSINESS.steuernummer} · {BUSINESS.finanzamt}
-          </p>
-          <p className="mt-1 text-zinc-500">{UST_CLAUSE}</p>
+          <p>© {new Date().getFullYear()} {BUSINESS.brand}</p>
         </div>
       </div>
     </footer>
