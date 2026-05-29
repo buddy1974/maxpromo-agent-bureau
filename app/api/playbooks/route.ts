@@ -1,7 +1,9 @@
 import { apiOk } from "@/lib/api/response";
-import { PLAYBOOKS } from "@/lib/core/playbooks";
+import { getPlaybooks } from "@/lib/db/queries/playbooks";
 
-// Playbook library — config data, read-only.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(PLAYBOOKS);
+  return apiOk(await getPlaybooks());
 }

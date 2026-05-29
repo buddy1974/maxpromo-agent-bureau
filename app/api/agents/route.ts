@@ -1,7 +1,9 @@
 import { apiOk } from "@/lib/api/response";
-import { AGENTS } from "@/lib/registry/agents";
+import { getAgents } from "@/lib/db/queries/agents";
 
-// TODO(sprint-3): merge registry definitions with per-org enable/config from DB.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(AGENTS);
+  return apiOk(await getAgents());
 }

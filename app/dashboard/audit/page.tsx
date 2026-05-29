@@ -2,13 +2,48 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { AuditFindingCard } from "@/components/dashboard/AuditFindingCard";
 import { AuditPriorityMatrix } from "@/components/dashboard/AuditPriorityMatrix";
 import { AgentRecommendationCard } from "@/components/dashboard/AgentRecommendationCard";
-import { MOCK_AUDIT_SESSION } from "@/lib/mock/audit";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { getAuditOverview } from "@/lib/db/queries/audit";
 import { AGENT_RECOMMENDATIONS } from "@/lib/core/operating-model";
+import type { AuditFinding, AuditPriority } from "@/types/audit";
+import type { AgentRiskLevel } from "@/types/agent";
+import type { OperatingStageKey } from "@/types/operating-model";
 
-// Module 1 — AI Audit Console. Entry point for diagnosing a business.
-export default function AuditConsolePage() {
-  const s = MOCK_AUDIT_SESSION;
-  // Pick a recommendation tier roughly matching the finding count.
+// Module 1 — AI Audit Console. DB-backed (demo workspace).
+export const dynamic = "force-dynamic";
+
+export default async function AuditConsolePage() {
+  const { session, findings } = await getAuditOverview();
+
+  if (!session) {
+    return (
+      <DashboardShell title="Audit Console">
+        <EmptyState
+          title="Kein Audit im Demo-Workspace"
+          hint="Führen Sie den Demo-Seed aus: npm run db:seed:demo"
+          glyph="◉"
+        />
+      </DashboardShell>
+    );
+  }
+
+  // Map DB rows -> AuditFinding. The table has no riskLevel column, so derive it
+  // from priority (same scale) for the RiskBadge.
+  const mapped: AuditFinding[] = findings.map((f) => ({
+    id: f.id,
+    category: f.category,
+    title: f.title,
+    pain: f.pain,
+    impactArea: f.impactArea as AuditFinding["impactArea"],
+    priority: f.priority as AuditPriority,
+    status: f.status as AuditFinding["status"],
+    recommendedStage: (f.recommendedStage ?? "audit") as OperatingStageKey,
+    recommendedAgents: Array.isArray(f.recommendedAgents)
+      ? (f.recommendedAgents as string[])
+      : [],
+    riskLevel: f.priority as AgentRiskLevel,
+  }));
+
   const recommendation =
     AGENT_RECOMMENDATIONS.find((r) => r.agents.length >= 3) ?? AGENT_RECOMMENDATIONS[0];
 
@@ -19,40 +54,42 @@ export default function AuditConsolePage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
-                Geschäfts-Check · {s.industry}
+                Geschäfts-Check · {session.industry ?? "—"}
               </p>
-              <h2 className="mt-1 text-xl font-semibold text-zinc-50">{s.businessName}</h2>
+              <h2 className="mt-1 text-xl font-semibold text-zinc-50">{session.businessName}</h2>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-semibold text-accent">{s.priorityScore}</p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                Prioritäts-Score
-              </p>
+              <p className="text-3xl font-semibold text-accent">{session.priorityScore}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">Prioritäts-Score</p>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div>
-            <h3 className="mb-3 text-base font-semibold text-zinc-100">Prioritäts-Matrix</h3>
-            <AuditPriorityMatrix findings={s.findings} />
-          </div>
-          <div>
-            <h3 className="mb-3 text-base font-semibold text-zinc-100">Empfohlenes Team</h3>
-            <AgentRecommendationCard recommendation={recommendation} />
-          </div>
-        </section>
+        {mapped.length ? (
+          <>
+            <section className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-base font-semibold text-zinc-100">Prioritäts-Matrix</h3>
+                <AuditPriorityMatrix findings={mapped} />
+              </div>
+              <div>
+                <h3 className="mb-3 text-base font-semibold text-zinc-100">Empfohlenes Team</h3>
+                <AgentRecommendationCard recommendation={recommendation} />
+              </div>
+            </section>
 
-        <section>
-          <h3 className="mb-3 text-base font-semibold text-zinc-100">
-            Findings ({s.findings.length})
-          </h3>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {s.findings.map((f) => (
-              <AuditFindingCard key={f.id} finding={f} />
-            ))}
-          </div>
-        </section>
+            <section>
+              <h3 className="mb-3 text-base font-semibold text-zinc-100">Findings ({mapped.length})</h3>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {mapped.map((f) => (
+                  <AuditFindingCard key={f.id} finding={f} />
+                ))}
+              </div>
+            </section>
+          </>
+        ) : (
+          <EmptyState title="Keine Findings" glyph="◉" />
+        )}
       </div>
     </DashboardShell>
   );

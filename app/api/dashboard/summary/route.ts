@@ -1,7 +1,10 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_DASHBOARD_SUMMARY } from "@/lib/mock/dashboard";
+import { getDashboardData } from "@/lib/db/queries/dashboard";
 
-// TODO(sprint-3): replace mock with real org-scoped DB aggregation.
+// Reads the demo workspace from Neon (resilient: empty data if no DB / unseeded).
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_DASHBOARD_SUMMARY);
+  return apiOk(await getDashboardData());
 }

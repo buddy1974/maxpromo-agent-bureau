@@ -1,6 +1,6 @@
 # Max Agent — Architecture & Implementation Roadmap (v1)
 
-**Status:** Sprint 1 SHIPPED · Sprint 2 (platform skeleton) BUILT · Sprint 3 (operating-model backbone + strategic modules) BUILT. See "Sprint Log" at the bottom.
+**Status:** Sprint 1 SHIPPED · Sprint 2 (platform skeleton) · Sprint 3 (operating-model + modules) · Sprint 3.5 (schema hardened + applied to Neon) · Sprint 4 (demo seed + safe DB wiring) BUILT. See "Sprint Log".
 **Prepared by:** Principal AI Systems Architect (reviewer/validator role)
 **Date:** 2026-05-29
 **Repo state:** Active Next.js project, pushed to GitHub, deployed on Vercel.
@@ -332,6 +332,34 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 **What is real vs mock (Sprint 3):** real = landing + lead capture + legal + deploy. Mock = everything under `/dashboard`, including all 5 modules and the operating-model data. The Sprint 3 schema exists but is not connected.
 
 **Needs later QA / security review:** approve/reject/execute wiring (auth + audit + org scope first); NextAuth + multi-tenant scoping (dashboard still unauthenticated, mock-only); `db:push` review of the platform + operating schemas; no OCR/upload, no real sending, no AI tool scanning — all deferred by design.
+
+### Sprint 3.5 — Schema hardened + applied to Neon · DONE
+- Hardened `platform.ts`/`operating.ts`: `cost_usd`→`cost_cents`; `audit_findings.session_id` + `approval_events.proposal_id` made `NOT NULL`; `approval_events.proposal_id` FK→`agent_proposals`; unique constraints on `app_users(business_id,email)`, `agents(business_id,key)`, `playbooks(business_id,key)`.
+- Applied the **31 new tables + enums** to Neon as an additive change (lead tables untouched). DB now has the full 35-table schema.
+- **Migration-tracking caveat (open):** the apply was done via raw SQL; `lib/db/migrations/meta/` is not a clean Drizzle baseline. Before the next `db:generate`, reconcile with `drizzle-kit pull` (introspect live DB → baseline snapshot) so future migrations diff incrementally.
+
+### Sprint 4 — Demo workspace seed + safe DB wiring · BUILT
+**Goal:** turn the static skeleton into a demo-ready operating system backed by Neon — still supervised, no autonomy, no outbound actions.
+
+- **Demo workspace** identified by name **"Maxpromo Demo Operations"** (`config/demo.ts`; no schema change — `businesses` has no key column).
+- **Seed system** (`lib/seed/*.mjs`, plain JS run by Node 24 via `npm run db:seed:demo`): business, 9 agents, audit session+findings, waiting-room, documents+actions, governance (tools/risks/policy), 7 proposals (+approval_events), 10 playbooks (+steps), activity, operating_model. **Idempotent** (find-or-create business by name; each child set inserted only when empty), parameterized SQL, no deletes, never touches lead tables.
+- **Read layer** (`lib/db/queries/*.ts`): demo-scoped, read-only, wrapped in `safeRead` → returns empty on no-DB/no-seed/any error (so `next build` and unseeded envs never crash).
+- **API routes wired to Neon (GET, `force-dynamic`):** dashboard/summary, agents, audit, waiting-room, documents, ai-governance, approvals, playbooks, activity. POST/execution intentionally absent.
+- **Pages wired to Neon** (`force-dynamic` + empty states): `/dashboard`, `/dashboard/audit`, `/dashboard/waiting-room`, `/dashboard/approvals`, `/dashboard/documents`.
+- **Still on mock/registry/core (documented):** agents, ai-governance, playbooks, operating-model, client-implementation, briefing, tasks, projects, leads, contacts, research, memory. Their API routes read DB, but the pages keep richer registry/core renders pending a later reconciliation.
+- **Safety:** approval/execute buttons remain non-functional placeholders; no outbound messaging, no OCR/upload, no AI scanning, no OAuth, no payment, no autonomous execution. Empty states prompt "Run demo seed".
+
+**Run order (local, you):** review seed → `npm run db:seed:demo` → reload dashboard. The seed writes only to the demo business.
+
+### Sprint 5 Candidate
+- approval workflow persistence (approve/reject writes + audit events)
+- real activity-log writes from user/agent actions
+- admin seed controls (reseed/reset demo)
+- lead-to-client conversion flow
+- **auth boundary (NextAuth)** + business context from session (replaces the demo-by-name lookup)
+- client workspace setup (real onboarding beyond the demo)
+- n8n integration planning (execution bus behind approvals)
+- reconcile Drizzle migration baseline (`drizzle-kit pull`)
 
 ---
 

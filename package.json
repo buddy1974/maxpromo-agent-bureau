@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs generate",
-    "db:push": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs push"
+    "db:push": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs push",
+    "db:seed:demo": "node --env-file=.env.local lib/seed/run-demo-seed.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

@@ -1,12 +1,48 @@
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DocumentIntakeCard } from "@/components/dashboard/DocumentIntakeCard";
-import { MOCK_DOCUMENTS } from "@/lib/mock/documents";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { getDocuments } from "@/lib/db/queries/documents";
+import type { DocumentIntakeItem } from "@/types/document-intake";
 
-// Module 4 — Document Intake Desk. Turns document chaos into structured action.
-// Skeleton only: no OCR, no upload pipeline. Summaries/actions are mock-prepared.
-export default function DocumentsPage() {
-  const actionable = MOCK_DOCUMENTS.filter((d) => d.status === "action_required" || d.status === "new");
-  const rest = MOCK_DOCUMENTS.filter((d) => !(d.status === "action_required" || d.status === "new"));
+// Module 4 — Document Intake Desk. DB-backed. No OCR/upload pipeline; summaries
+// and actions are prepared, not executed.
+export const dynamic = "force-dynamic";
+
+export default async function DocumentsPage() {
+  const rows = await getDocuments();
+
+  const items: DocumentIntakeItem[] = rows.map((d) => ({
+    id: d.id,
+    title: d.title,
+    type: d.type as DocumentIntakeItem["type"],
+    source: d.source ?? "",
+    summary: d.summary ?? "",
+    status: d.status as DocumentIntakeItem["status"],
+    riskLevel: d.riskLevel as DocumentIntakeItem["riskLevel"],
+    assignedAgent: d.assignedAgent ?? "",
+    suggestedResponse: d.suggestedResponse ?? undefined,
+    approvalStatus: "pending",
+    requiredActions: d.requiredActions.map((a) => ({
+      id: a.id,
+      label: a.label,
+      deadline: a.deadline ? new Date(a.deadline).toISOString().slice(0, 10) : undefined,
+    })),
+  }));
+
+  const actionable = items.filter((d) => d.status === "action_required" || d.status === "new");
+  const rest = items.filter((d) => !(d.status === "action_required" || d.status === "new"));
+
+  if (!items.length) {
+    return (
+      <DashboardShell title="Document Intake Desk">
+        <EmptyState
+          title="Keine Dokumente im Demo-Workspace"
+          hint="Führen Sie den Demo-Seed aus: npm run db:seed:demo"
+          glyph="▢"
+        />
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell title="Document Intake Desk">
@@ -16,21 +52,20 @@ export default function DocumentsPage() {
             Aus Dokument-Chaos wird strukturierte Aktion
           </p>
           <p className="mt-2 text-sm text-zinc-300">
-            Rechnungen, Verträge, Finanzamt- und Versicherungsschreiben — zusammengefasst,
-            mit Frist und nächster Aktion. Vorbereitet, nicht ausgeführt.
+            Zusammengefasst, mit Frist und nächster Aktion. Vorbereitet, nicht ausgeführt.
           </p>
         </div>
 
-        <section>
-          <h3 className="mb-3 text-base font-semibold text-zinc-100">
-            Aktion erforderlich
-          </h3>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {actionable.map((d) => (
-              <DocumentIntakeCard key={d.id} item={d} />
-            ))}
-          </div>
-        </section>
+        {actionable.length > 0 && (
+          <section>
+            <h3 className="mb-3 text-base font-semibold text-zinc-100">Aktion erforderlich</h3>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {actionable.map((d) => (
+                <DocumentIntakeCard key={d.id} item={d} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {rest.length > 0 && (
           <section>

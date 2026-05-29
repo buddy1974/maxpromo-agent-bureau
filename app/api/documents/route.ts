@@ -1,7 +1,10 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_DOCUMENTS } from "@/lib/mock/documents";
+import { getDocuments } from "@/lib/db/queries/documents";
 
-// TODO(sprint-4): real intake items. No OCR/upload pipeline here.
+// Read-only. No OCR/upload pipeline.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_DOCUMENTS);
+  return apiOk(await getDocuments());
 }

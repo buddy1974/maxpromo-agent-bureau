@@ -1,7 +1,9 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_ACTIVITY } from "@/lib/mock/activity";
+import { getActivity } from "@/lib/db/queries/activity";
 
-// TODO(sprint-3): org-scoped DB read from activity_logs.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_ACTIVITY);
+  return apiOk(await getActivity());
 }

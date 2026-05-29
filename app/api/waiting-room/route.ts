@@ -1,7 +1,10 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_WAITING_ROOM } from "@/lib/mock/waiting-room";
+import { getWaitingRoom } from "@/lib/db/queries/waiting-room";
 
-// TODO(sprint-4): real waiting-room items. No outbound send from here.
+// Read-only. No outbound send from here.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_WAITING_ROOM);
+  return apiOk(await getWaitingRoom());
 }

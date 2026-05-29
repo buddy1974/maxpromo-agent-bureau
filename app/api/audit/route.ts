@@ -1,7 +1,9 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_AUDIT_SESSIONS } from "@/lib/mock/audit";
+import { getAuditOverview } from "@/lib/db/queries/audit";
 
-// TODO(sprint-4): org-scoped audit sessions from DB.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_AUDIT_SESSIONS);
+  return apiOk(await getAuditOverview());
 }

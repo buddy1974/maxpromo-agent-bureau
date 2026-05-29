@@ -7,6 +7,18 @@ to Neon and (optionally) ping Telegram.
 
 > Architecture, roadmap and decisions live in [`PLAN.md`](./PLAN.md).
 
+## Demo workspace (Sprint 4)
+A single demo business — **"Maxpromo Demo Operations"** — backs the dashboard with
+real Neon data. Seed it (idempotent, safe, never touches lead tables):
+```bash
+npm run db:seed:demo     # node --env-file=.env.local lib/seed/run-demo-seed.mjs
+```
+DB-backed pages (`/dashboard`, `/dashboard/audit`, `/waiting-room`, `/approvals`,
+`/documents`) read live from Neon via `lib/db/queries/*` (read-only, demo-scoped,
+resilient — they show empty states with a "run demo seed" prompt when unseeded).
+Remaining dashboard pages still render from registry/mock. No outbound actions,
+no execution, no OCR, no scanning — supervised preview only.
+
 ## Stack
 - **Next.js 15** (App Router, RSC)
 - **Tailwind 3** — Hybrid design system (dark premium, orange accent) in `tailwind.config.ts`

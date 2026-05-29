@@ -1,9 +1,11 @@
 import { apiOk } from "@/lib/api/response";
-import { MOCK_APPROVALS } from "@/lib/mock/approvals";
+import { getProposals } from "@/lib/db/queries/approvals";
 
-// TODO(sprint-3): list real agent_proposals (org-scoped). POST approve/reject
-// will be added with the guardrails sprint — deliberately NOT implemented here
-// so no agent action can be executed without the full audit + auth path.
+// Read-only. POST approve/reject is intentionally NOT implemented — no execution
+// path until auth + audit + ownership land (Sprint 5).
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return apiOk(MOCK_APPROVALS);
+  return apiOk(await getProposals());
 }
