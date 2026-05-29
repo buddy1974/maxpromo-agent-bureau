@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -80,7 +81,10 @@ export const appUsers = pgTable("app_users", {
   name: text("name"),
   role: text("role").notNull().default("owner"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // One user record per email within a business.
+  emailPerBusiness: unique("app_users_business_email_uq").on(t.businessId, t.email),
+}));
 
 // ── Agent bureau ─────────────────────────────────────────────────────────────
 export const agents = pgTable("agents", {
@@ -98,7 +102,10 @@ export const agents = pgTable("agents", {
   enabled: boolean("enabled").notNull().default(true),
   config: jsonb("config"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // One agent definition per registry key within a business.
+  keyPerBusiness: unique("agents_business_key_uq").on(t.businessId, t.key),
+}));
 
 export const agentRuns = pgTable(
   "agent_runs",
@@ -113,7 +120,7 @@ export const agentRuns = pgTable(
     output: jsonb("output"),
     status: text("status").notNull().default("completed"),
     tokens: integer("tokens"),
-    costUsd: integer("cost_usd"), // store cents to avoid float drift
+    costCents: integer("cost_cents"), // amount in cents to avoid float drift
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },

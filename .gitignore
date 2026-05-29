@@ -28,6 +28,9 @@ yarn-error.log*
 # drizzle
 /lib/db/migrations/meta/_journal.json.bak
 
+# typescript
+tsconfig.tsbuildinfo
+
 # editor
 .vscode/*
 !.vscode/extensions.json

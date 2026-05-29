@@ -6,9 +6,10 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import { businesses } from "./platform";
+import { businesses, agentProposals } from "./platform";
 
 /**
  * ADDITIVE Sprint 3 schema — operating model + strategic modules. Mirrors the
@@ -87,7 +88,9 @@ export const auditSessions = pgTable("audit_sessions", {
 export const auditFindings = pgTable("audit_findings", {
   id: uuid("id").primaryKey().defaultRandom(),
   businessId: biz(),
-  sessionId: uuid("session_id").references(() => auditSessions.id, { onDelete: "cascade" }),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => auditSessions.id, { onDelete: "cascade" }),
   category: text("category").notNull(),
   title: text("title").notNull(),
   pain: text("pain").notNull(),
@@ -139,7 +142,10 @@ export const playbooks = pgTable("playbooks", {
   approvalRequired: boolean("approval_required").notNull().default(true),
   reusableTemplate: boolean("reusable_template").notNull().default(true),
   createdAt: ts(),
-});
+}, (t) => ({
+  // One playbook per key within a business.
+  keyPerBusiness: unique("playbooks_business_key_uq").on(t.businessId, t.key),
+}));
 
 export const playbookSteps = pgTable("playbook_steps", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -240,7 +246,10 @@ export const aiPolicyChecklists = pgTable("ai_policy_checklists", {
 export const approvalEvents = pgTable("approval_events", {
   id: uuid("id").primaryKey().defaultRandom(),
   businessId: biz(),
-  proposalId: uuid("proposal_id"),
+  // Every approval event belongs to a real proposal (default decision from review).
+  proposalId: uuid("proposal_id")
+    .notNull()
+    .references(() => agentProposals.id, { onDelete: "cascade" }),
   step: text("step").notNull(), // observed | prepared | proposed | reviewed | executed | logged
   actor: text("actor").notNull(), // user | agent | system
   note: text("note"),
