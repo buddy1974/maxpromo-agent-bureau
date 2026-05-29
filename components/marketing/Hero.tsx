@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StatusTicker } from "./StatusTicker";
 
 const BADGES = ["DSGVO-konform", "EU-gehostet", "Made in Essen"];
@@ -33,6 +34,12 @@ export function Hero() {
           >
             Das Team ansehen →
           </a>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-md px-6 py-3 text-base font-medium text-accent transition-colors hover:text-accent-hover"
+          >
+            System-Vorschau ansehen →
+          </Link>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500">

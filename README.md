@@ -52,13 +52,43 @@ typed result. Honeypot field blocks basic bots.
 ## Project layout
 ```
 app/(marketing)/        landing + impressum + datenschutz
-app/api/leads/          lead capture route
-lib/db/                 drizzle schema + Neon client
+app/dashboard/          supervised Chief of Staff dashboard (Sprint 2, mock data)
+app/api/leads/          lead capture route (REAL: Neon + Telegram)
+app/api/(dashboard...)/ summary, agents, approvals, tasks, projects,
+                        contacts, memory, activity (mock, typed)
+lib/db/                 drizzle schema (leads = real; platform = additive skeleton)
 lib/validation/         zod (shared)
 lib/integrations/       telegram notifier
-components/marketing/   page sections
+lib/registry/agents.ts  9 supervised agents
+lib/mock/               central mock data layer (dashboard demo)
+lib/api/response.ts     consistent API envelope
+types/                  shared TypeScript types
+components/marketing/    landing sections
+components/dashboard/    dashboard shell + cards + badges
 config/legal.ts         LOCKED Impressum + §19 UStG
 ```
+
+## Dashboard (system preview — Sprints 2 & 3)
+A typed product skeleton behind the landing page at `/dashboard`. **All dashboard
+data is mock** (`lib/mock`); nothing is autonomous and no integrations are wired.
+Agents follow a supervised model — Observe → Prepare → Propose → **Human Review**
+→ Execute → Log — and all action buttons are non-functional placeholders by design.
+
+The product is organised around the operating-model backbone (`lib/core/`):
+**Audit → Diagnose → Design Agent Team → Manual Delivery → Systemize → Install → Maintain**.
+The dashboard is only the visible surface; manual/concierge delivery is a
+first-class part of the model.
+
+Backbone routes: `/dashboard/operating-model`, `/dashboard/playbooks`,
+`/dashboard/client-implementation`. Strategic modules: `/dashboard/audit`,
+`/dashboard/waiting-room`, `/dashboard/approvals`, `/dashboard/documents`,
+`/dashboard/ai-governance`.
+
+The platform + operating DB schemas (`lib/db/schema/platform.ts`,
+`lib/db/schema/operating.ts`) are **additive and not pushed** — review before
+`db:push`. No OCR/upload, no real message sending, no AI-tool scanning (all
+deferred). See `PLAN.md` → Sprint Log for the real-vs-mock breakdown and the
+Version 2 Backlog.
 
 ## Legal
 `config/legal.ts` holds the locked business identity and the mandatory

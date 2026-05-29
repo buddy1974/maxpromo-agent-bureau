@@ -1,9 +1,9 @@
 # Max Agent — Architecture & Implementation Roadmap (v1)
 
-**Status:** PROPOSAL — awaiting Product Owner approval. No code written yet.
+**Status:** Sprint 1 SHIPPED · Sprint 2 (platform skeleton) BUILT · Sprint 3 (operating-model backbone + strategic modules) BUILT. See "Sprint Log" at the bottom.
 **Prepared by:** Principal AI Systems Architect (reviewer/validator role)
 **Date:** 2026-05-29
-**Repo state:** Empty (greenfield — no git history, no files). This is a clean build, not a migration.
+**Repo state:** Active Next.js project, pushed to GitHub, deployed on Vercel.
 
 > Reviewed: master handover, project header, locked tech stack, anti-vibe-code standard, `apex.host` (crawled for structure/logic), Shake (executive layout reference). Validated against §19 UStG and DSGVO constraints for the German market.
 
@@ -278,3 +278,72 @@ No code will be written until you give the go-ahead to start Sprint 1.
 
 ### Awaiting your word to begin Sprint 1
 On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landing page (Maxpromo dark/orange system) + audit-booking CTA, `POST /api/leads` → Neon persistence + Telegram notify, UTM + `?ref=` attribution, legal footer (Impressum + §19 UStG), OG share cards, mobile review, deploy to Vercel.
+
+---
+
+## Sprint Log
+
+### Sprint 1 — Public offer page · SHIPPED
+- Public Hybrid landing (`app/(marketing)`): hero, agent bureau, integrations marquee, before/after, pillars, stats, audit-booking lead form, footer.
+- `POST /api/leads`: Zod validate → Neon persist (`lead_submissions` + `attribution`) → flag-gated Telegram notify. Honeypot. No fake success.
+- Legal: `/impressum`, `/datenschutz`; footer simplified (link-only) per owner; §19 clause retained in `config/legal.ts` and on Impressum.
+- Deployed to Vercel (Next.js preset), Neon (EU) tables pushed, Telegram pipeline live.
+- GTM decision: **no waitlist** — details shown openly, conversion is an optional direct booking.
+
+### Sprint 2 — Supervised Chief of Staff platform skeleton · BUILT
+**Goal:** realistic, typed product skeleton behind the landing page. All data is MOCK; nothing autonomous; no live integrations wired.
+
+- **Route map (new):** `/dashboard` (overview) + `/briefing /approvals /tasks /projects /leads /contacts /research /agents /memory /settings`. Public landing gains a secondary CTA "System-Vorschau ansehen" → `/dashboard` (main audit CTA and form untouched).
+- **Supervision model (everywhere):** Observe → Prepare → Propose → Human Review → Execute → Log. Approve/Reject/Edit buttons are deliberate **non-functional placeholders**. UI labels: System Preview, Supervised Mode, Approval Required, Proposal Ready, Awaiting Review.
+- **Components (`components/dashboard`):** DashboardShell, Sidebar, Topbar, MetricCard, StatusBadge, RiskBadge, ActivityFeed, AgentStatusCard, ApprovalCard, BriefingPanel, TaskList, EmptyState.
+- **Types (`types/`):** agent, dashboard, task, project, contact, memory, activity, integration.
+- **Agent registry (`lib/registry/agents.ts`):** 9 supervised agents (Chief of Staff + Lead, Research, CRM, Calendar, Content, Operations, Document, Follow-Up), each with allowed/blocked actions and `requiresApproval`.
+- **Mock layer (`lib/mock/`):** dashboard, tasks, projects, contacts, activity, approvals, memory, integrations — centralised, business-relevant, demo-ready.
+- **API skeleton (`app/api/`):** GET summary, agents, agents/[id], approvals, tasks, projects, contacts, memory, activity — all return typed mock via a single `lib/api/response.ts` envelope. No unsafe writes; `TODO(sprint-3)` markers for DB wiring.
+- **DB schema (additive, `lib/db/schema/platform.ts`):** businesses, app_users, agents, agent_runs, agent_proposals, approvals, tasks, projects, contacts, companies, notes, memory_entries, activity_logs, integrations + enums (agent_status, risk_level, approval_status, task_status, project_status, integration_status). Existing lead tables untouched. **Not pushed** — review before `db:push`. pgvector embedding column deferred until the extension is enabled.
+
+**What is real vs mock:**
+- Real: landing page, lead capture → Neon + Telegram, legal pages, build/deploy.
+- Mock: all dashboard data (via `lib/mock`), agent activity, approvals. The platform schema exists but is not connected.
+
+**Needs later QA / security review:**
+- Approve/reject/execute path (must add auth + audit + org-scoping before any real action).
+- AuthN/AuthZ (NextAuth) and multi-tenant row scoping — not yet present; dashboard is currently unauthenticated and shows mock data only.
+- `db:push` of the platform schema (review FKs/enums against live data first).
+
+**Next recommended sprint:** NextAuth + `businesses`/`app_users`, org-scoped data-access layer, wire ONE read path (tasks or dashboard summary) from mock → real DB end-to-end, behind login.
+
+### Sprint 3 — Core operating model + strategic modules · BUILT
+**Frame:** The dashboard is the visible surface; the product is organised around the backbone **Audit → Diagnose → Design Agent Team → Manual Delivery → Systemize → Install → Maintain**. The product must support manual/concierge delivery before automation. Supervision (Observe→Prepare→Propose→Human Review→Execute→Log) is enforced in the UI; all action controls remain non-functional placeholders. Still all-mock, no autonomy, no live integrations.
+
+- **Operating-model core (`lib/core/`):** `operating-model.ts` (7 stages, safe-action lifecycle, audit categories, agent-team recommendations, installation + maintenance), `business-stages.ts` (diagnosis catalogue + helpers), `agent-hierarchy.ts` (org chart), `playbooks.ts` (10 reusable playbooks).
+- **Agent hierarchy:** registry extended — each of the 9 agents now declares `supportedOperatingStages`, `auditPainsSolved`, `playbooks`, `businessOutcomes`.
+- **Backbone routes:** `/dashboard/operating-model`, `/dashboard/playbooks`, `/dashboard/client-implementation` (concierge/manual delivery).
+- **5 strategic modules:** Module 1 **AI Audit Console** (`/dashboard/audit`), Module 2 **Customer Waiting Room** (`/dashboard/waiting-room`), Module 3 **Approval Desk** (`/dashboard/approvals`, expanded with lifecycle timeline + risk summary), Module 4 **Document Intake Desk** (`/dashboard/documents`), Module 5 **Shadow AI Governance** (`/dashboard/ai-governance`).
+- **Overview:** gained an operating-model status band (audit status, current stage, recommended team) + Manual Delivery and Maintenance Watchlist panels.
+- **Sidebar:** regrouped into Steuerung / Arbeitsbereich / System, with all backbone + module routes.
+- **Types (new):** operating-model, audit, waiting-room, approval, document-intake, ai-governance, playbook.
+- **Components (new, 15):** AuditFindingCard, AuditPriorityMatrix, AgentRecommendationCard, WaitingCustomerCard, WaitingRoomQueue, ResponseSuggestionPanel, ApprovalTimeline, ApprovalRiskSummary, DocumentIntakeCard, DocumentRiskBadge, RequiredActionPanel, AIToolRegister, GovernanceRiskCard, PolicyChecklist, DataSensitivityMatrix.
+- **Mock (new):** audit, waiting-room, documents, ai-governance, operating-model (manual delivery), client-implementation; approvals extended with Approval-Desk items.
+- **APIs (new, 7):** audit, waiting-room, documents, ai-governance, operating-model, playbooks, client-implementation — typed mock via the shared envelope, `TODO(sprint-4)` for DB wiring.
+- **Schema (additive, `lib/db/schema/operating.ts`):** operating_models, audit_sessions, audit_findings, diagnosis_findings, agent_recommendations, implementation_notes, playbooks, playbook_steps, client_installations, maintenance_checks, waiting_room_items, document_intake_items, document_required_actions, ai_tool_register, ai_governance_risks, ai_policy_checklists, approval_events + enums (audit_status, audit_priority, waiting_room_status, document_status, document_risk_level, ai_tool_status, governance_risk_level). Lead + platform tables untouched. **Not pushed** — review before `db:push`.
+- **Landing:** untouched except the existing "System-Vorschau" secondary CTA. Footer legal block stays simplified; Impressum/Datenschutz intact; lead capture unbroken.
+
+**What is real vs mock (Sprint 3):** real = landing + lead capture + legal + deploy. Mock = everything under `/dashboard`, including all 5 modules and the operating-model data. The Sprint 3 schema exists but is not connected.
+
+**Needs later QA / security review:** approve/reject/execute wiring (auth + audit + org scope first); NextAuth + multi-tenant scoping (dashboard still unauthenticated, mock-only); `db:push` review of the platform + operating schemas; no OCR/upload, no real sending, no AI tool scanning — all deferred by design.
+
+---
+
+## Version 2 Backlog
+Not to be implemented now — captured for sequencing after the platform is wired to real data:
+
+- Deeper industry-specific agent teams (per-vertical bureaus).
+- Real integrations via the gateway (Gmail, Calendar, WhatsApp, Slack, HubSpot, Stripe — read-first).
+- OCR + document upload pipeline for the Document Intake Desk.
+- Inbox / calendar OAuth.
+- Partner / referral tracking surfaced in-product (schema already supports it).
+- Paid audit pipeline (charged Geschäfts-Check → implementation).
+- Reporting exports.
+- Voice layer.
+- Industry templates: RestaurantOS, HandwerkOS, PraxisOS, TaxKontrol, PublishingOS.
