@@ -1,0 +1,280 @@
+# Max Agent — Architecture & Implementation Roadmap (v1)
+
+**Status:** PROPOSAL — awaiting Product Owner approval. No code written yet.
+**Prepared by:** Principal AI Systems Architect (reviewer/validator role)
+**Date:** 2026-05-29
+**Repo state:** Empty (greenfield — no git history, no files). This is a clean build, not a migration.
+
+> Reviewed: master handover, project header, locked tech stack, anti-vibe-code standard, `apex.host` (crawled for structure/logic), Shake (executive layout reference). Validated against §19 UStG and DSGVO constraints for the German market.
+
+---
+
+## 0. Strategic framing (why this order)
+
+Your own go-to-market sequence is **validate → presell → manual delivery → build audience → automate**. That dictates build order more than the product roadmap does:
+
+- You do **not** build the platform first. You build the **public offer page** first, then drive traffic to it (organic social + paid ads), capture interested leads, presell/deliver manually (concierge) — and only build the platform once demand is proven.
+- **No waitlist.** The page is public from day one so it can be shared directly and promoted with paid spend. The conversion action is a **lead capture / booking CTA**, not a gated signup — same funnel shape as maxpromo.digital's "Business-Systeme Audit anfragen."
+- The platform roadmap below is real and locked-in, but **Sprint 1 is the public landing page**, deliberately ahead of platform foundation. This is the cheapest path to a real, paid-traffic-ready signal.
+
+---
+
+## 1. Architecture Proposal
+
+### 1.1 Shape
+
+A **modular monolith** on Next.js App Router for the MVP, with hard internal seams so any layer (agents, integrations, heartbeat) can be extracted into its own service later without rewriting business logic. This matches the locked stack and avoids premature microservices.
+
+### 1.2 Layers (maps directly to the handover's Brain → Bureau → Memory → Gateway model)
+
+```
+┌───────────────────────────────────────────────────────────┐
+│ PRESENTATION   Next.js App Router (RSC + client islands)    │
+│                Executive/calm UI. Dashboard, briefing, etc. │
+├───────────────────────────────────────────────────────────┤
+│ APPLICATION    Route Handlers + Server Actions              │
+│                Every mutation: Zod validate → authorize →   │
+│                persist → return typed result + UI feedback  │
+├───────────────────────────────────────────────────────────┤
+│ DOMAIN         Pure TS, NO framework imports                │
+│                prioritization · lead-scoring · briefing     │
+│                (testable in isolation — anti-vibe rule)     │
+├───────────────────────────────────────────────────────────┤
+│ BRAIN          Orchestrator. Routes a request (from user OR │
+│ (Chief of      heartbeat) to one or more Skills. Decides    │
+│  Staff)        which Agent handles what. NO autonomy in MVP.│
+├───────────────────────────────────────────────────────────┤
+│ AGENTS         Registry entries = system prompt + allowed   │
+│                skills + tool permissions + config (jsonb).  │
+│                Lead · Research · CRM · Calendar · Content ·  │
+│                Operations. In MVP they are invoked, not     │
+│                self-running.                                │
+├───────────────────────────────────────────────────────────┤
+│ SKILLS         Reusable, typed functions (summarize, draft, │
+│                research, qualify, score, schedule). Pure    │
+│                I/O contracts. Shared across agents.         │
+├───────────────────────────────────────────────────────────┤
+│ MEMORY         Neon Postgres = source of truth (entities)   │
+│                + pgvector for semantic recall (notes,       │
+│                conversations, decisions).                   │
+├───────────────────────────────────────────────────────────┤
+│ GATEWAY        Adapter pattern per integration. n8n as the  │
+│                outbound automation/execution bus. Telegram  │
+│                first channel. Read-only/stubbed in MVP.     │
+├───────────────────────────────────────────────────────────┤
+│ HEARTBEAT      Scheduled jobs (Vercel Cron or n8n cron) →   │
+│                orchestrator scans: morning briefing,        │
+│                overdue, follow-ups, opportunity scan.       │
+│                MVP = single daily briefing only.            │
+├───────────────────────────────────────────────────────────┤
+│ GUARDRAILS     Every agent action that touches the outside  │
+│                world becomes an Action Proposal (pending →  │
+│                human approves → executed). Full audit log.  │
+│                Human-in-the-loop from day one in the schema.│
+└───────────────────────────────────────────────────────────┘
+```
+
+### 1.3 Non-negotiable cross-cutting decisions
+
+- **Multi-tenancy from day one.** Every business table carries `org_id`. All reads/writes go through a single data-access layer that injects the caller's `org_id` — isolation is enforced in one place, then tested. This prevents the classic "one tenant sees another's data" leak.
+- **One Brain, many Skills** (per handover) — not 6 independent bots. Agents are *configurations over a shared skill set*, stored in the registry.
+- **No autonomous external actions in MVP.** Everything outbound is a proposal a human approves. This is both a safety control and a German-market trust/liability requirement.
+- **Secrets never in the DB as plaintext.** OAuth tokens/credentials encrypted at rest (or referenced from a vault / Vercel encrypted env). The `integrations` table stores a reference + status, not raw secrets.
+- **EU data residency.** Neon region = EU (Frankfurt). Required for DSGVO when storing third-party contact/lead data.
+
+---
+
+## 2. Database Proposal (Neon Postgres + Drizzle)
+
+Tables grouped by domain. All business tables have `org_id`, `created_at`, `updated_at`. `jsonb` used where shape is genuinely flexible (configs, payloads), typed columns everywhere else.
+
+### Identity & tenancy
+- `users` — id, email, name, role *(NextAuth)*
+- `organizations` — id, name, owner_user_id
+- `memberships` — user_id, org_id, role *(MVP: one org per user, but modelled for growth)*
+
+### Operational core (Phase 1 — visibility)
+- `projects` — id, org_id, name, status `(planning|active|blocked|done)`, health, owner_user_id, due_date
+- `tasks` — id, org_id, project_id?, title, status `(todo|in_progress|done)`, priority, assignee_user_id, due_date, source `(manual|agent)`, created_by
+- `briefings` — id, org_id, date, summary `jsonb`, generated_at
+
+### Relationships (Phase 2)
+- `companies` — id, org_id, name, domain, industry, size, notes
+- `contacts` — id, org_id, company_id?, name, email, phone, tags `text[]`, status, last_contacted_at, owner_user_id
+- `leads` — id, org_id, contact_id?, company_id?, source, stage `(new|qualified|contacted|won|lost)`, score `int`, next_action_at, owner_user_id
+- `notes` — id, org_id, entity_type, entity_id, body, author_user_id
+
+### Memory (Phase 3)
+- `conversations` / `messages` — channel, external_id, contact_id?, direction, body, ts *(comms memory)*
+- `memory_embeddings` — id, org_id, source_type, source_id, content, `embedding vector(1536)` *(pgvector, ivfflat index)*
+
+### Agent system (Phase 3)
+- `agents` — id, org_id, key `(chief|lead|research|crm|calendar|content|operations)`, name, description, enabled, system_prompt, config `jsonb`
+- `skills` — code-defined registry (typed I/O); DB row optional for enable/config only
+- `agent_runs` — id, org_id, agent_key, trigger `(manual|heartbeat|webhook)`, input `jsonb`, output `jsonb`, status, tokens, cost_usd, started_at, finished_at
+
+### Guardrails (Phase 3 — schema present from start)
+- `action_proposals` — id, org_id, agent_run_id, type, payload `jsonb`, status `(pending|approved|rejected|executed)`, approved_by, executed_at
+- `audit_logs` — id, org_id, actor `(user|agent)`, action, target_type, target_id, metadata `jsonb`, created_at
+
+### Integrations (Phase 4)
+- `integrations` — id, org_id, provider, status, credentials_ref *(NOT raw secrets)*, config `jsonb`
+
+### Landing / growth (Sprint 1 — needed first)
+- `lead_submissions` — id, name, email, phone?, company?, message?, cta_type `(audit|call|contact)`, status `(new|contacted|qualified|won|lost)`, created_at — **public inbound leads from the offer page** (no waitlist)
+- `attribution` — captured on each submission: `utm_source/medium/campaign/content`, `ref_code?`, `landing_path`, `referrer` — so organic vs **paid promotion** ROI is measurable from day one
+- `partners` — id, code, name, owner_email *(unique referral links for affiliate/partner promo)*
+- `referrals` — id, partner_id, lead_submission_id?, converted_at? *(track + pay partners on conversion)*
+
+**Indexes:** `org_id` on all business tables; `due_date` on tasks/leads; partial indexes on open statuses; ivfflat on embeddings; unique on `waitlist_signups.email` and `partners.code`.
+
+---
+
+## 3. Folder Structure
+
+```
+maxpromo-agent-bureau/
+├─ app/
+│  ├─ (marketing)/              # Sprint 1 lives here
+│  │  ├─ page.tsx               # landing page
+│  │  └─ legal/                 # impressum, datenschutz
+│  ├─ (app)/                    # authenticated product shell
+│  │  ├─ layout.tsx             # sidebar nav
+│  │  ├─ dashboard/  briefing/  tasks/  projects/
+│  │  ├─ leads/  contacts/  research/
+│  │  ├─ agents/  memory/  settings/
+│  ├─ api/                      # route handlers (waitlist, webhooks)
+│  ├─ layout.tsx · globals.css
+├─ lib/
+│  ├─ db/
+│  │  ├─ schema/                # drizzle tables split by domain
+│  │  ├─ migrations/
+│  │  └─ index.ts               # client + data-access (org scoping)
+│  ├─ domain/                   # PURE business logic, no framework
+│  │  ├─ prioritization/ · lead-scoring/ · briefing/
+│  ├─ agents/
+│  │  ├─ brain/                 # orchestrator
+│  │  ├─ registry.ts            # agent definitions
+│  │  ├─ skills/                # reusable typed skills
+│  │  └─ guardrails/            # policy + approvals
+│  ├─ integrations/
+│  │  ├─ gateway.ts             # adapter interface
+│  │  └─ telegram/ · gmail/ · n8n/
+│  ├─ memory/                   # relational + vector access
+│  ├─ auth/                     # NextAuth config
+│  ├─ validation/               # zod schemas (shared client+server)
+│  └─ utils/
+├─ components/
+│  ├─ ui/                       # primitives (design system)
+│  ├─ app/                      # dashboard widgets
+│  └─ marketing/                # landing sections
+├─ config/
+│  ├─ constants.ts
+│  └─ legal.ts                  # §19 UStG text, Impressum data
+├─ drizzle.config.ts
+└─ ... (tsconfig, tailwind, env schema, CI)
+```
+
+**Rule enforced by structure:** business logic in `lib/domain` never imports Next.js/React. UI never queries the DB directly — it goes through `lib/db` data-access. This is what makes the anti-vibe-code "separate business logic / no giant files" standard mechanical rather than aspirational.
+
+---
+
+## 4. MVP Build Plan (visibility-first, per project rule)
+
+The handover is explicit: **build visibility before autonomy.** Phases:
+
+- **Phase 0 — Foundation.** Next.js + TS + Tailwind, Drizzle + Neon (EU), NextAuth, app shell + design tokens (executive/calm), CI/CD to Vercel, typed env validation.
+- **Phase 1 — Visibility core.** Dashboard, Tasks, Projects, Daily Briefing (generated from real data, not faked). Each feature: frontend → API → Zod → persist → ownership → real UI feedback.
+- **Phase 2 — Relationships.** Companies, Contacts, Leads (manual lead scoring), Notes.
+- **Phase 3 — Intelligence scaffolding.** Memory (relational + pgvector), Agent Registry (view/configure), Brain orchestrator running *single* skill calls on demand (summarize/draft/research), Guardrails (action proposals + audit log).
+- **Phase 4 — (post-MVP) Automation.** Heartbeat (cron briefings/scans), integrations via gateway (Telegram → Gmail/Calendar), real agent loops — all behind human approval.
+
+**MVP = Phases 0–3.** Autonomy and live integrations are explicitly out of MVP scope.
+
+---
+
+## 5. Sprint Plan (2-week sprints, solo + AI-assisted)
+
+| Sprint | Goal | Output | Validates |
+|---|---|---|---|
+| **1 (FIRST)** | Public offer page | Public landing + lead-capture CTA + UTM/referral attribution, deployed, legal-compliant, share/ad-ready | Paid-traffic demand signal |
+| 2 | Foundation | Auth, DB, app shell, design system, CI/CD | Platform skeleton |
+| 3 | Visibility I | Tasks + Projects + Dashboard (full CRUD) | Core usefulness |
+| 4 | Visibility II | Daily Briefing + Contacts + Leads | Operational clarity |
+| 5 | Intelligence | Memory + Agent Registry + first Skills | "One brain, many skills" |
+| 6 | Safety + 1 channel | Guardrails (proposals/audit) + Telegram + cron briefing | Safe automation path |
+
+Sprint 1 ships **before** the platform, on purpose — it's the cheapest real-world signal and feeds the presell + concierge-delivery motion.
+
+---
+
+## 6. Risks (and mitigations)
+
+1. **Over-building before validation.** Your own thesis says presell first. *Mitigation:* Sprint 1 = landing page; gate platform spend on waitlist/presell signal.
+2. **DSGVO / data protection (German market).** Storing third-party contacts/leads is processing personal data. *Mitigation:* EU-region Neon, Datenschutzerklärung + Impressum, deletion/export flows, AVV/DPA template for clients, data-minimization in schema.
+3. **Autonomous-action liability.** Auto-sending email or moving money is a trust and legal hazard. *Mitigation:* human-in-the-loop approvals + audit log baked into schema from day one; no autonomy in MVP.
+4. **Secret management for connectors.** OAuth tokens are a breach target. *Mitigation:* never store plaintext; encrypted refs / vault; least-privilege scopes.
+5. **Multi-tenant data leakage.** *Mitigation:* single org-scoped data-access layer + isolation tests.
+6. **LLM cost/latency drift.** *Mitigation:* track `cost_usd`/tokens per `agent_run`; cheap models for routing, premium only where needed; cache.
+7. **Marketing over-promise.** apex.host sells "autonomous real-execution." If the landing copy promises that but the MVP is visibility-only, demos break trust. *Mitigation:* honest positioning — "your AI operations bureau, with you in control" — outcomes over hype.
+8. **Scope sprawl (6 agents + 1000 integrations).** *Mitigation:* registry-not-autonomy; one channel (Telegram) first; integrations behind the gateway adapter, added one at a time.
+
+---
+
+## 7. Recommended First Sprint — "Max Agent Bureau" Landing Page
+
+**Objective:** A deployed, **public**, legally-compliant offer page — shareable on social and ready for paid promotion — that captures inbound leads via a booking/contact CTA and tracks campaign attribution. No waitlist. Your validation + presell asset.
+
+**Design logic — HYBRID (locked).** Definition per Product Owner:
+> Hybrid = **Maxpromo Digital visual system** + executive business scenes + operational AI dashboard overlays.
+> Style anchor = the current **maxpromo.digital** homepage. **Dark premium. Orange accent.** System-installation positioning. **Business owner in control.** **AI agents visible as a supervised operating layer.**
+
+**Anchor elements inherited from maxpromo.digital** (crawled 2026-05-29):
+- Dark premium background, single **orange accent**.
+- Monospace `// comment` section labels (e.g. `// Klingt bekannt?`, `// Aus laufenden Systemen`).
+- **Live system-status ticker** — scrolling feed of agent events (`● Neuer Lead erfasst · ⊟ KI-Agent online — antwortet · → Rechnung erstellt · ● CRM synchronisiert`). This *is* the "agents visible as a supervised operating layer" — reuse it for the Bureau.
+- Numbered process steps (`01 → 05`), real stats from live systems ("Keine Demos"), and the "installed & active" positioning.
+- Footer Impressum + §19 UStG already correct on maxpromo.digital — mirror it exactly.
+
+**Structure borrowed from Apex** (toned to the Maxpromo system, not cyberpunk): "not another chatbot" framing, Agent Bureau showcase (the team as cards, paralleling Maxpromo's Branchen-Systeme cards), integrations marquee, Before/After "you are the bottleneck" narrative, trust stats, repeated waitlist CTA.
+
+**Coherence note:** "Business owner in control / AI as a supervised layer" is the marketing face of the architecture's **guardrails + human-in-the-loop** model (§1.2, §1.3). The landing's status-ticker and "Sie genehmigen — die Agenten führen aus" messaging must reflect the *real* approval-gated product, not autonomous hype.
+
+**Section list:**
+1. Nav — logo · (Systeme/Docs) · primary CTA button
+2. Hero — system-installation headline + subhead + **primary CTA** + trust badges + live agent status-ticker (labelled as product preview)
+3. Agent Bureau — Chief of Staff + 6 agents as cards ("a team, not a chatbot"; agents as a supervised layer)
+4. Integrations marquee — Gmail, Calendar, Telegram, WhatsApp, Slack, n8n…
+5. Before / After — "You are the bottleneck" → "Your bureau runs operations, you stay in control"
+6. Three outcome pillars — Organization · Follow-through · Clarity (outcomes, not features)
+7. Stats / proof ("installed & active, keine Demos" — honest framing)
+8. **Lead-capture / booking CTA section** — name + email (+ optional phone/company/message) → real submission
+9. Footer — **Impressum** (Marcel Tabit Akwe, Körnerstr. 8, 45143 Essen · St.-Nr. 111/5339/7597 · FA Essen-NordOst), **"Gemäß §19 UStG wird keine Umsatzsteuer berechnet."**, Datenschutz link
+
+**Primary CTA (locked):** **Book a free audit (Geschäfts-Check)** — same proven funnel as maxpromo.digital. Lead form → you sell on the call (fits the concierge/presell motion). Form fields: name, email, phone?, company?, message?.
+
+**Lead routing (locked):** persist to **Neon** *and* send a **Telegram notification** on each submission.
+- *Sprint 1 dependency:* a Telegram bot token + target chat ID (BotFather). I'll need these as env vars — please have them ready, or I'll stub the notifier behind a feature flag so the page ships even before the token exists.
+
+**Backend (anti-vibe-code compliant — no fake success):**
+- `POST /api/leads` → Zod validate → insert `lead_submissions` + `attribution` (UTM, `?ref=`, referrer, landing path) → fire Telegram notification → real success/error state in UI.
+- Capture UTM + `?ref=` so **organic vs paid-ad ROI** is measurable and partners are attributable → `referrals`.
+
+**Done = public page deployed to Vercel, real lead persistence to Neon, UTM/referral attribution working, legal footer present, mobile-reviewed, OG/Twitter share cards set (it's going on social).**
+
+---
+
+## 8. STOPPED — WAITING FOR APPROVAL
+
+No code will be written until you give the go-ahead to start Sprint 1.
+
+### Decisions locked (Product Owner, 2026-05-29)
+- **Landing aesthetic:** **HYBRID (locked).** Maxpromo Digital visual system as anchor — dark premium, orange accent, `// comment` labels, live agent status-ticker, system-installation positioning, business owner in control, agents as a supervised layer. See §7 for full definition.
+- **Repo:** **Same repo** — landing under `app/(marketing)`, product under `app/(app)`, shared design system.
+- **MVP scope:** **Visibility-first, no autonomous actions.** Confirmed. Agents are invoked, not self-running; all outbound actions are human-approved proposals.
+- **Go-to-market:** **No waitlist.** Public offer page from day one — shareable on social, ready for paid promotion.
+- **Primary CTA:** **Book a free audit (Geschäfts-Check)** — lead form, sell on the call.
+- **Lead routing:** persist to **Neon** + **Telegram notification** per submission. *(Dependency: Telegram bot token + chat ID; will stub behind a flag if not ready.)*
+
+### Awaiting your word to begin Sprint 1
+On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landing page (Maxpromo dark/orange system) + audit-booking CTA, `POST /api/leads` → Neon persistence + Telegram notify, UTM + `?ref=` attribution, legal footer (Impressum + §19 UStG), OG share cards, mobile review, deploy to Vercel.
