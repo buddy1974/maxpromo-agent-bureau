@@ -351,14 +351,23 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 
 **Run order (local, you):** review seed → `npm run db:seed:demo` → reload dashboard. The seed writes only to the demo business.
 
-### Sprint 5 Candidate
-- approval workflow persistence (approve/reject writes + audit events)
-- real activity-log writes from user/agent actions
-- admin seed controls (reseed/reset demo)
+### Sprint 5 — Supervised approval workflow persistence · BUILT
+**Goal:** make the demo interactive + auditable. A human can approve/reject/mark-reviewed a proposal; the decision is persisted with an audit event + activity log. **No real-world execution** — no message/email/calendar/CRM action is performed.
+
+- **API:** `PATCH /api/approvals/[id]` — Zod-validated `{action: approve|reject|mark_reviewed, note?}`. Loads proposal; only acts on `pending` (else `409 already_*`); updates `agent_proposals.status` (`approve→approved`, `reject→rejected`, `mark_reviewed→` unchanged); inserts an `approval_events` row (step `reviewed`) + an `activity_logs` row. No execution, no external calls. Consistent `{ok,...}` envelope.
+- **Why `mark_reviewed` keeps status pending:** the `approval_status` enum has no `reviewed` value; recording a review event avoids an enum migration (none was needed this sprint).
+- **DB write helpers** (`lib/db/queries/approvals.ts`, `activity.ts`): `getProposalById`, `updateProposalStatus`, `createApprovalEvent`, `getApprovalEventsForProposal`, `createActivityLog` — centralized, parameterized, errors propagate (no `safeRead`) so failures aren't masked.
+- **UI:** `components/dashboard/ApprovalActions.tsx` (client) — Approve Preview / Reject Proposal / Mark Reviewed buttons → PATCH → success/error message + `router.refresh()` (so `/dashboard` counts + activity update). Approvals page rewired; **safety banner** added. Decided proposals show a recorded-decision note instead of buttons.
+- **Demo status:** `GET /api/demo/status` — read-only counts (business exists, agents, proposals, waiting-room, documents, playbooks, activity). No reset/delete endpoint.
+- **Types:** `ApprovalAction`, `ApprovalEventInput`, `ApprovalTransitionResult` (`types/approval.ts`); `ActivityLogInput` (in activity query). Activity actor is `user` (not "human") to match the existing `ActivityFeed` glyph map.
+- **Untouched:** landing, lead capture, Impressum/Datenschutz, schema (no `db:push`, no migration), seed data.
+
+### Sprint 6 Candidate
+- admin seed controls (reseed/reset demo, guarded)
 - lead-to-client conversion flow
-- **auth boundary (NextAuth)** + business context from session (replaces the demo-by-name lookup)
+- **auth boundary (NextAuth)** + business context from session (replaces the demo-by-name lookup); scope approval writes to the authed business
 - client workspace setup (real onboarding beyond the demo)
-- n8n integration planning (execution bus behind approvals)
+- n8n integration planning (the actual execution bus behind approvals)
 - reconcile Drizzle migration baseline (`drizzle-kit pull`)
 
 ---

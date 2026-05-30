@@ -17,3 +17,31 @@ export async function getActivity(limit = 20) {
       .limit(limit);
   }, [] as (typeof activityLogs.$inferSelect)[]);
 }
+
+// ── Write helper (Sprint 5) ─────────────────────────────────────────────────
+// Records a single activity-log entry. Used by the approval workflow. Errors
+// propagate (no safeRead) so the caller can decide how to handle them.
+export interface ActivityLogInput {
+  businessId: string;
+  actor: "user" | "agent" | "system";
+  actorName: string;
+  action: string;
+  target?: string | null;
+  detail?: string | null;
+}
+
+export async function createActivityLog(input: ActivityLogInput) {
+  const db = getDb();
+  const [row] = await db
+    .insert(activityLogs)
+    .values({
+      businessId: input.businessId,
+      actor: input.actor,
+      actorName: input.actorName,
+      action: input.action,
+      target: input.target ?? null,
+      detail: input.detail ?? null,
+    })
+    .returning();
+  return row;
+}
