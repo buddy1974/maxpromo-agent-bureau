@@ -26,6 +26,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/research", label: "Research", glyph: "▥" },
   { href: "/dashboard/agents", label: "Agenten", glyph: "◇" },
   { href: "/dashboard/memory", label: "Memory", glyph: "◎" },
+  { href: "/dashboard/ai-lab", label: "AI Lab", glyph: "✦" },
 
   { href: "/dashboard/settings", label: "Einstellungen", glyph: "⚙", group: "System" },
 ];

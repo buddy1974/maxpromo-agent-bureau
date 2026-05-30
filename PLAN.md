@@ -362,6 +362,17 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - **Types:** `ApprovalAction`, `ApprovalEventInput`, `ApprovalTransitionResult` (`types/approval.ts`); `ActivityLogInput` (in activity query). Activity actor is `user` (not "human") to match the existing `ActivityFeed` glyph map.
 - **Untouched:** landing, lead capture, Impressum/Datenschutz, schema (no `db:push`, no migration), seed data.
 
+### Sprint 6A — OpenAI-first AI provider layer · BUILT
+**Goal:** safe AI **draft** generation behind a clean provider abstraction. AI prepares proposals/recommendations only — **no execution, no outbound action, no DB writes from generation.**
+
+- **Provider strategy:** OpenAI default (cost-effective); Anthropic a deliberate placeholder (`ai_provider_not_implemented`) for premium reasoning later.
+- **Env (`config/env.ts`, server-only):** `getAIConfig`, `hasOpenAIConfig`, `getOpenAIModel`. Vars: `OPENAI_API_KEY` (optional), `AI_PROVIDER=openai`, `AI_MODEL=gpt-4.1-mini`, `AI_TEMPERATURE=0.3`. **Never required at boot** — dashboard builds/renders without it; keys never `NEXT_PUBLIC_`.
+- **Provider layer (`lib/ai/`):** `types.ts`, `prompts.ts` (supervised system prompt + per-task instructions; JSON-only output), `safety.ts` (input bounds; sensitive-domain risk floor → tax/legal/medical/HR/finance/customer default high; outbound-adjacent drafts default medium), `openai-provider.ts` (fetch to `/v1/responses`, no SDK dep, robust text extraction + JSON parse with raw fallback, handles missing key / 429 / errors without leaking bodies), `provider.ts` (selector). Tasks: follow_up_draft, audit_summary, document_summary, waiting_room_response, governance_recommendation, proposal_draft.
+- **API:** `POST /api/ai/generate` (Zod-validated, key checked in-route → `ai_not_configured`, returns `{title, summary, draft, riskLevel, recommendedNextAction, requiresApproval:true, safetyNote}`, **no DB write**); `GET /api/ai/status` (`{provider, model, configured}`, never the key).
+- **AI Lab** (`/dashboard/ai-lab`, internal, sidebar item ✦): task selector + input + generate → result panel + safety note; "Create proposal" disabled ("Coming next"); not-configured message guides adding `OPENAI_API_KEY` in Vercel. Not on the landing page.
+- **Visual clarity layer (added on top of 6A, no rebuild):** `AgentIdentityCard` (operational card — status/risk/approval badges, Observiert/Bereitet vor/Freigabe nötig, connected systems, last activity, next action; **no faces/avatars**) now powers `/dashboard/agents` (Chief primary + specialists). Marketing `AgentBureau` refined to short Observiert/Bereitet-vor/Freigabe-nötig cards (+ Governance-Agent positioning). Two infographics — `SafeActionLifecycle` (6 steps, "Ausführen" gated behind "Menschliche Freigabe") and `BusinessFlowInfographic` (problem → prepared → owner approval → logged → organised) — inserted into the landing after the team and after Before/After. Operating-model page gained a 7-stage chain strip. Copy reinforces "KI bereitet vor. Der Mensch entscheidet."
+- **Untouched:** hero, lead capture, Impressum/Datenschutz, footer legal, schema (no migration/push), seed, approval flow.
+
 ### Sprint 6 Candidate
 - admin seed controls (reseed/reset demo, guarded)
 - lead-to-client conversion flow

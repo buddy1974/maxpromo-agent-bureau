@@ -22,6 +22,25 @@ export default function OperatingModelPage() {
         </section>
 
         <section>
+          <h3 className="mb-3 text-base font-semibold text-zinc-100">Die sieben Stufen</h3>
+          <ol className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-stretch">
+            {OPERATING_STAGES.map((stage, i) => (
+              <li key={stage.key} className="flex items-center gap-2 md:flex-1">
+                <div className="flex-1 rounded-lg border border-line bg-ink-850 px-3 py-2">
+                  <span className="font-mono text-[10px] text-accent">
+                    {String(stage.order).padStart(2, "0")}
+                  </span>
+                  <p className="mt-0.5 text-sm font-medium text-zinc-200">{stage.name}</p>
+                </div>
+                {i < OPERATING_STAGES.length - 1 && (
+                  <span className="text-zinc-600 md:hidden">↓</span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section>
           <h3 className="mb-3 text-base font-semibold text-zinc-100">Sichere Aktions-Kette</h3>
           <div className="flex flex-wrap gap-2">
             {SAFE_ACTION_LIFECYCLE.map((s, i) => (

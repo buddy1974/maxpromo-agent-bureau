@@ -1,0 +1,36 @@
+import { apiOk, apiError } from "@/lib/api/response";
+import { hasOpenAIConfig } from "@/config/env";
+import { aiGenerateSchema } from "@/lib/validation/ai";
+import { generate } from "@/lib/ai/provider";
+
+// SAFETY: generates a DRAFT only. No DB write, no outbound message, no execution,
+// no external integration beyond the OpenAI API call itself.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request) {
+  // Key is checked HERE (not at app boot) — dashboard builds without it.
+  if (!hasOpenAIConfig()) {
+    return apiError("ai_not_configured", 503);
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return apiError("invalid_json", 400);
+  }
+
+  const parsed = aiGenerateSchema.safeParse(body);
+  if (!parsed.success) {
+    return apiError("invalid_request", 422, parsed.error.flatten().fieldErrors);
+  }
+
+  const result = await generate(parsed.data);
+  if (!result.ok) {
+    // Map provider errors to a safe status.
+    const status = result.error === "ai_not_configured" ? 503 : 502;
+    return apiError(result.error, status);
+  }
+  return apiOk(result.data);
+}

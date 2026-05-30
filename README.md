@@ -19,6 +19,14 @@ resilient — they show empty states with a "run demo seed" prompt when unseeded
 Remaining dashboard pages still render from registry/mock. No outbound actions,
 no execution, no OCR, no scanning — supervised preview only.
 
+## AI provider layer (Sprint 6A)
+OpenAI-first, **draft-only** AI generation behind `lib/ai/*`. No execution, no
+outbound action, no DB writes from generation. Set `OPENAI_API_KEY` (server-only;
+never `NEXT_PUBLIC_`) plus optional `AI_PROVIDER`/`AI_MODEL`/`AI_TEMPERATURE` to
+enable it — the app builds and runs fine **without** a key (AI routes return
+`ai_not_configured`). Test it at **`/dashboard/ai-lab`** (internal). Endpoints:
+`POST /api/ai/generate`, `GET /api/ai/status`. Anthropic is a placeholder for later.
+
 ## Stack
 - **Next.js 15** (App Router, RSC)
 - **Tailwind 3** — Hybrid design system (dark premium, orange accent) in `tailwind.config.ts`
