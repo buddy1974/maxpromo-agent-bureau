@@ -73,7 +73,7 @@ export function LeadForm() {
       setStatus("error");
       setError(
         data?.error === "not_configured"
-          ? "Das Formular ist noch nicht final verbunden. Bitte schreiben Sie an djstranger2000@gmail.com."
+          ? "Das Formular ist noch nicht final verbunden. Bitte schreiben Sie an info@maxpromo.digital."
           : "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
       );
     } catch {
@@ -90,7 +90,7 @@ export function LeadForm() {
           Anfrage erhalten.
         </h3>
         <p className="mt-2 text-zinc-400">
-          Wir melden uns für Ihren kostenlosen Geschäfts-Check. 30 Minuten,
+          Wir melden uns zu Ihrem kostenlosen Geschäfts-Check. 30 Minuten,
           unverbindlich.
         </p>
       </div>

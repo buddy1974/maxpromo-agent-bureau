@@ -4,4 +4,4 @@
 // (Sprint 5), business context will come from the session instead of this name.
 export const DEMO_BUSINESS_KEY = "maxpromo-demo-operations";
 export const DEMO_BUSINESS_NAME = "Maxpromo Demo Operations";
-export const DEMO_OWNER_EMAIL = "djstranger2000@gmail.com";
+export const DEMO_OWNER_EMAIL = "info@maxpromo.digital";

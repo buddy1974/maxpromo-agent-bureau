@@ -23,7 +23,7 @@ export default function ImpressumPage() {
       <div className="mt-8 space-y-6 text-zinc-400">
         <section>
           <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-500">
-            Angaben gemäß § 5 TMG
+            Angaben gemäß § 5 DDG
           </h2>
           <p className="mt-3 text-zinc-300">{BUSINESS.legalName}</p>
           <p>{BUSINESS.brand}</p>
@@ -51,7 +51,7 @@ export default function ImpressumPage() {
 
         <section>
           <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-500">
-            Verantwortlich für den Inhalt
+            Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
           </h2>
           <p className="mt-3">
             {BUSINESS.legalName}, {BUSINESS.street}, {BUSINESS.city}

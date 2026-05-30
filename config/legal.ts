@@ -9,8 +9,8 @@ export const BUSINESS = {
   country: "Deutschland",
   steuernummer: "111/5339/7597",
   finanzamt: "FA Essen-NordOst",
-  email: "djstranger2000@gmail.com",
+  email: "info@maxpromo.digital",
 } as const;
 
-// Required on every commercial surface (Kleinunternehmer §19 UStG). Do not change.
-export const UST_CLAUSE = "Gemäß §19 UStG wird keine Umsatzsteuer berechnet.";
+// Required on every commercial surface (Kleinunternehmer § 19 UStG). Do not change.
+export const UST_CLAUSE = "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.";
