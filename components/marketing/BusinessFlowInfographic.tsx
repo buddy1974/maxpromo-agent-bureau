@@ -1,14 +1,48 @@
-// Value chain: from a recognised problem to an organised business — with the
-// owner approving in the middle. Reusable, clean.
-const FLOW = [
-  { label: "Problem erkannt", detail: "Wartender Kunde, Frist, verpasstes Follow-up, Shadow-AI-Risiko, unklare Priorität." },
-  { label: "Agent bereitet Vorschlag vor", detail: "Kontext gesammelt, Entwurf erstellt — nichts gesendet." },
-  { label: "Owner prüft und genehmigt", detail: "Sie entscheiden. Anpassen, freigeben oder ablehnen.", accent: true },
-  { label: "Aktion wird protokolliert", detail: "Jede Entscheidung landet im Audit-Trail." },
-  { label: "Geschäft läuft organisierter", detail: "Weniger Chaos, verlässliches Follow-through." },
+// Visual business pipeline — inline SVG.
+// Desktop: horizontal 5-node flow (horizontally scrollable).
+// Mobile: vertical spine with connected nodes.
+// Orange pivot = "Owner genehmigt". Minimal text. No cards/paragraphs.
+
+const C = {
+  node:   "#121216",
+  ring:   "#26262e",
+  line:   "#2a2a33",
+  text:   "#e4e4e7",
+  dim:    "#a1a1aa",
+  accent: "#ff6a1a",
+  ink:    "#08080a",
+};
+
+type Stage = {
+  glyph:  string;
+  label:  string;
+  sub:    string;
+  accent?: boolean;
+  final?: boolean;
+};
+
+const FLOW: Stage[] = [
+  { glyph: "!",  label: "Problem erkannt",    sub: "Frist · Follow-up · Anfrage" },
+  { glyph: "⊟", label: "Agent bereitet vor",  sub: "Entwurf — nichts gesendet" },
+  { glyph: "✓",  label: "Owner genehmigt",    sub: "Sie entscheiden",           accent: true },
+  { glyph: "▦",  label: "Protokolliert",       sub: "Vollständiger Audit-Trail" },
+  { glyph: "◎",  label: "Geschäft organisiert", sub: "Verlässliches Follow-through", final: true },
 ];
 
+// Desktop: 5 nodes, even spacing in 960px canvas.
+const DXS: number[] = [80, 280, 480, 680, 880];
+const DCY = 92;
+const DR  = 38;
+
+// Mobile: vertical
+const MX  = 36;
+const MTOP = 36;
+const MGAP = 88;
+const MR   = 24;
+
 export function BusinessFlowInfographic() {
+  const mHeight = MTOP + (FLOW.length - 1) * MGAP + 52;
+
   return (
     <section className="border-b border-line">
       <div className="mx-auto max-w-content px-6 py-16">
@@ -17,30 +51,117 @@ export function BusinessFlowInfographic() {
           Vorschläge statt Blind-Automation. Der Owner bleibt in Kontrolle.
         </h2>
 
-        <ol className="mt-8 space-y-3">
-          {FLOW.map((step, i) => (
-            <li
-              key={step.label}
-              className={`flex gap-4 rounded-xl border p-4 ${
-                step.accent ? "border-accent/40 bg-accent-soft" : "border-line bg-ink-850"
-              }`}
-            >
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-mono text-xs ${
-                  step.accent ? "border-accent/50 text-accent" : "border-line text-zinc-500"
-                }`}
-              >
-                {i + 1}
-              </span>
-              <div>
-                <p className={`text-sm font-medium ${step.accent ? "text-accent" : "text-zinc-100"}`}>
-                  {step.label}
-                </p>
-                <p className="mt-0.5 text-sm text-zinc-400">{step.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        {/* Desktop: horizontal flow */}
+        <div className="mt-8 hidden overflow-x-auto rounded-2xl border border-line bg-ink-850/50 p-4 md:block md:p-6">
+          <svg
+            viewBox="0 0 960 195"
+            className="h-auto w-full min-w-[720px]"
+            role="img"
+            aria-label="Prozess: Problem erkannt, Agent bereitet vor, Owner genehmigt, Protokolliert, Geschäft organisiert"
+          >
+            <defs>
+              <marker id="bfar"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill={C.line} />
+              </marker>
+              <marker id="bfarA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill={C.accent} />
+              </marker>
+              <filter id="bglow">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+
+            {/* connectors */}
+            {DXS.slice(0, -1).map((x, i) => {
+              const isAccent = i === 1; // before-gate → gate
+              return (
+                <line key={i}
+                  x1={x + DR + 6}   y1={DCY}
+                  x2={DXS[i+1] - DR - 8} y2={DCY}
+                  stroke={isAccent ? C.accent : C.line}
+                  strokeWidth={isAccent ? 2 : 1.5}
+                  markerEnd={`url(#${isAccent ? "bfarA" : "bfar"})`}
+                />
+              );
+            })}
+
+            {/* nodes */}
+            {FLOW.map((s, i) => {
+              const x = DXS[i];
+              return (
+                <g key={i}>
+                  {s.accent && (
+                    <circle cx={x} cy={DCY} r={DR + 9} fill="none" stroke={C.accent} strokeOpacity="0.2" strokeWidth="2" filter="url(#bglow)" />
+                  )}
+                  {s.final && (
+                    <circle cx={x} cy={DCY} r={DR + 5} fill="none" stroke={C.text} strokeOpacity="0.12" strokeWidth="1.5" />
+                  )}
+                  <circle cx={x} cy={DCY} r={DR}
+                    fill={s.accent ? C.accent : C.node}
+                    stroke={s.accent ? C.accent : s.final ? C.text : C.ring}
+                    strokeWidth={s.final ? 1.5 : 1.5}
+                    strokeOpacity={s.final ? 0.35 : 1}
+                  />
+                  <text x={x} y={DCY + 1} textAnchor="middle" dominantBaseline="central" fontSize="20"
+                    fill={s.accent ? C.ink : s.final ? C.text : C.text}>
+                    {s.glyph}
+                  </text>
+                  {/* label */}
+                  <text x={x} y={DCY + DR + 20} textAnchor="middle" fontSize="13" fontWeight="600"
+                    fill={s.accent ? C.accent : s.final ? C.text : C.text}>
+                    {s.label}
+                  </text>
+                  <text x={x} y={DCY + DR + 36} textAnchor="middle" fontSize="11.5" fill={C.dim}>
+                    {s.sub}
+                  </text>
+                  {s.accent && (
+                    <text x={x} y={DCY - DR - 12} textAnchor="middle" fontSize="9" fontFamily="monospace" fill={C.accent}>
+                      SIE ENTSCHEIDEN
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Mobile: vertical flow */}
+        <div className="mt-8 overflow-hidden rounded-2xl border border-line bg-ink-850/50 p-4 md:hidden">
+          <svg viewBox={`0 0 480 ${mHeight}`} className="h-auto w-full" role="img" aria-label="Prozess-Pipeline vertikal">
+            {/* spine */}
+            <line x1={MX} y1={MTOP} x2={MX} y2={MTOP + (FLOW.length - 1) * MGAP}
+              stroke={C.line} strokeWidth="2" />
+
+            {FLOW.map((s, i) => {
+              const cy = MTOP + i * MGAP;
+              return (
+                <g key={i}>
+                  {i < FLOW.length - 1 && (
+                    <text x={MX} y={cy + MGAP / 2 + 4} textAnchor="middle" fontSize="11" fill={C.line}>▼</text>
+                  )}
+                  {s.accent && <circle cx={MX} cy={cy} r={MR + 6} fill="none" stroke={C.accent} strokeOpacity="0.25" strokeWidth="1.5" />}
+                  <circle cx={MX} cy={cy} r={MR}
+                    fill={s.accent ? C.accent : C.node}
+                    stroke={s.accent ? C.accent : C.ring}
+                    strokeWidth="1.5"
+                  />
+                  <text x={MX} y={cy + 1} textAnchor="middle" dominantBaseline="central" fontSize="15"
+                    fill={s.accent ? C.ink : C.text}>
+                    {s.glyph}
+                  </text>
+                  <text x={MX + 38} y={cy - 3} fontSize="14" fontWeight="600"
+                    fill={s.accent ? C.accent : C.text}>
+                    {s.label}
+                  </text>
+                  <text x={MX + 38} y={cy + 16} fontSize="12" fill={C.dim}>
+                    {s.sub}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       </div>
     </section>
   );
