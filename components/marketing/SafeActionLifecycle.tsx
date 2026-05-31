@@ -1,61 +1,138 @@
-// The supervised action lifecycle. "Ausführen" is visually gated behind
-// "Menschliche Freigabe" — never autonomous.
-const STEPS = [
-  { n: 1, label: "Beobachten", glyph: "●" },
-  { n: 2, label: "Vorbereiten", glyph: "⊟" },
-  { n: 3, label: "Vorschlagen", glyph: "→" },
-  { n: 4, label: "Menschliche Freigabe", glyph: "✓", gate: true },
-  { n: 5, label: "Ausführen", glyph: "◆", gated: true },
-  { n: 6, label: "Protokollieren", glyph: "▦" },
+// Real process diagram (inline SVG). Six evenly-spaced connected nodes.
+// Orange gate = "Menschliche Freigabe". Execute node is visually gated by
+// a dependency arc — cannot happen without the orange approval step.
+// Desktop: horizontal flow. Mobile: horizontally scrollable (min-w).
+
+const C = {
+  node:   "#121216",
+  line:   "#2a2a33",
+  ring:   "#26262e",
+  text:   "#e4e4e7",
+  dim:    "#71717a",
+  accent: "#ff6a1a",
+  ink:    "#08080a",
+};
+
+type Step = { label: string[]; glyph: string; gate?: boolean; gated?: boolean };
+const STEPS: Step[] = [
+  { label: ["Beobachten"],         glyph: "●" },
+  { label: ["Vorbereiten"],        glyph: "⊟" },
+  { label: ["Vorschlagen"],        glyph: "→" },
+  { label: ["Menschliche","Freigabe"], glyph: "✓", gate: true },
+  { label: ["Ausführen"],          glyph: "◆", gated: true },
+  { label: ["Protokollieren"],     glyph: "▦" },
 ];
+
+// Even 160-px spacing across 960 wide canvas.
+const XS: number[] = [80, 240, 400, 560, 720, 880];
+const CY = 104;
+const R  = 38;
 
 export function SafeActionLifecycle() {
   return (
-    <section className="border-b border-line">
+    <section id="ablauf" className="border-b border-line">
       <div className="mx-auto max-w-content px-6 py-16">
         <p className="eyebrow">// Sichere Aktions-Kette</p>
         <h2 className="mt-4 max-w-2xl text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">
-          KI bereitet vor. Der Mensch entscheidet. Das System protokolliert.
+          KI bereitet vor. Der Mensch entscheidet.
         </h2>
 
-        <ol className="mt-8 flex flex-col gap-3 md:flex-row md:items-stretch">
-          {STEPS.map((s, i) => (
-            <li key={s.n} className="flex items-center gap-3 md:flex-1 md:flex-col md:items-stretch">
-              <div
-                className={`flex-1 rounded-xl border p-4 ${
-                  s.gate
-                    ? "border-accent/50 bg-accent-soft"
-                    : s.gated
-                      ? "border-line bg-ink-850 opacity-90"
-                      : "border-line bg-ink-850"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`font-mono text-sm ${s.gate ? "text-accent" : "text-zinc-500"}`}>
-                    {s.glyph}
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
-                    {String(s.n).padStart(2, "0")}
-                  </span>
-                </div>
-                <p className={`mt-2 text-sm font-medium ${s.gate ? "text-accent" : "text-zinc-200"}`}>
-                  {s.label}
-                </p>
-                {s.gated && (
-                  <p className="mt-1 text-[11px] text-zinc-500">nur nach Freigabe</p>
-                )}
-              </div>
-              {i < STEPS.length - 1 && (
-                <span className="shrink-0 text-zinc-600 md:hidden">↓</span>
-              )}
-            </li>
-          ))}
-        </ol>
+        <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-ink-850/50 p-4 md:p-6">
+          <svg
+            viewBox="0 0 960 220"
+            className="h-auto w-full min-w-[720px]"
+            role="img"
+            aria-label="Aktions-Kette: Beobachten, Vorbereiten, Vorschlagen, Menschliche Freigabe, Ausführen, Protokollieren"
+          >
+            <defs>
+              <marker id="ar"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill={C.line} />
+              </marker>
+              <marker id="arA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill={C.accent} />
+              </marker>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
 
-        <p className="mt-6 text-sm text-zinc-400">
-          „Ausführen" hängt immer von der menschlichen Freigabe ab. Keine
-          unkontrollierte Ausführung.
-        </p>
+            {/* connector lines */}
+            {XS.slice(0, -1).map((x, i) => {
+              const isAccent = i === 3; // gate → execute
+              return (
+                <line
+                  key={i}
+                  x1={x + R + 6} y1={CY}
+                  x2={XS[i + 1] - R - 8} y2={CY}
+                  stroke={isAccent ? C.accent : C.line}
+                  strokeWidth={isAccent ? 2.5 : 1.5}
+                  markerEnd={`url(#${isAccent ? "arA" : "ar"})`}
+                />
+              );
+            })}
+
+            {/* dependency arc — gate locks execute */}
+            <path
+              d={`M ${XS[3]},${CY + R + 2} C ${XS[3]},${CY + R + 46} ${XS[4]},${CY + R + 46} ${XS[4]},${CY + R + 2}`}
+              fill="none"
+              stroke={C.accent}
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              strokeOpacity="0.5"
+            />
+            <text x={(XS[3] + XS[4]) / 2} y={CY + R + 50} textAnchor="middle" fontSize="9" fontFamily="monospace" fill={C.accent} opacity="0.55">
+              NUR NACH FREIGABE
+            </text>
+
+            {/* nodes */}
+            {STEPS.map((s, i) => {
+              const x = XS[i];
+              return (
+                <g key={i}>
+                  {/* outer glow ring on gate */}
+                  {s.gate && (
+                    <circle cx={x} cy={CY} r={R + 9} fill="none" stroke={C.accent} strokeOpacity="0.2" strokeWidth="2" filter="url(#glow)" />
+                  )}
+                  {/* step counter */}
+                  <text x={x} y={CY - R - 12} textAnchor="middle" fontSize="10" fontFamily="monospace" fill={C.dim}>
+                    {String(i + 1).padStart(2, "0")}
+                  </text>
+                  {/* node circle */}
+                  <circle
+                    cx={x} cy={CY} r={R}
+                    fill={s.gate ? C.accent : C.node}
+                    stroke={s.gate ? C.accent : s.gated ? C.accent : C.ring}
+                    strokeWidth={s.gated ? 2 : 1.5}
+                    strokeDasharray={s.gated ? "5 4" : undefined}
+                  />
+                  {/* glyph */}
+                  <text x={x} y={CY + 1} textAnchor="middle" dominantBaseline="central" fontSize="22"
+                    fill={s.gate ? C.ink : s.gated ? C.accent : C.text}>
+                    {s.glyph}
+                  </text>
+                  {/* label lines */}
+                  {s.label.map((ln, k) => (
+                    <text key={k} x={x} y={CY + R + 20 + k * 16}
+                      textAnchor="middle" fontSize="13"
+                      fontWeight={s.gate ? 600 : 500}
+                      fill={s.gate ? C.accent : C.text}>
+                      {ln}
+                    </text>
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="mt-5 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent-soft px-4 py-2.5">
+          <span className="font-mono text-accent">✓</span>
+          <p className="text-sm text-zinc-300">
+            KI bereitet vor. Der Mensch entscheidet.{" "}
+            <span className="text-accent">Jede Aktion wird protokolliert.</span>
+          </p>
+        </div>
       </div>
     </section>
   );
