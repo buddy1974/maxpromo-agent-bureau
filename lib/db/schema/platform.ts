@@ -81,6 +81,10 @@ export const appUsers = pgTable("app_users", {
   name: text("name"),
   role: text("role").notNull().default("owner"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Auth-1A: provisioned credentials (argon2id hash stored here; null until account is provisioned)
+  passwordHash: text("password_hash"),
+  // Auth-1A: last successful login; null for unprovisioned accounts
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
 }, (t) => ({
   // One user record per email within a business.
   emailPerBusiness: unique("app_users_business_email_uq").on(t.businessId, t.email),

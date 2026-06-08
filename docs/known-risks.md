@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-05
+Last updated: 2026-06-08
 
 ---
 
@@ -22,7 +22,7 @@ Last updated: 2026-06-05
 
 | # | Risk | Detail |
 |---|------|--------|
-| 6 | Drizzle migration baseline/journal must be reconciled before auth migration | Schema has been applied directly to Neon. Migration journal may be out of sync. Auth-0 must clean this before new migrations are added. |
+| 6 | ~~Drizzle migration baseline/journal reconciled~~ | **RESOLVED — Auth-0 complete.** Baseline `0000_burly_black_bird.sql` is DO-NOT-APPLY. `0001_auth_user_columns.sql` generated for review. Neon apply pending Marcel + Opus approval. |
 | 7 | Real client data must not enter the system before Auth-1 to Auth-4 complete | The current demo state contains seeded test data only. Real business data requires tenant isolation and ownership checks first. |
 | 8 | Datenschutz must be updated before scaling paid traffic or handling real client dashboard data | Current privacy policy may not reflect actual data flows once client tenants are active. |
 | 9 | Telegram lead notifications carry lead PII | Lead name and email are sent to a Telegram bot on every form submission. This is documented and intentional but must remain auditable and disclosed in Datenschutz. |

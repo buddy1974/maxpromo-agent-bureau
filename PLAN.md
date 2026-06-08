@@ -387,17 +387,21 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 
 > **Rule:** Do not onboard real client data until Auth-1 through Auth-4 are complete.
 
-### Auth-0 — Drizzle Baseline Reconcile
-- Owner: Opus plan → Sonnet executes after approval
-- Goal: Reconcile Drizzle migration journal with current Neon schema state before any new migrations are applied
-- Method: `drizzle-kit pull` introspection, compare against journal, produce clean baseline
-- Blocks: Auth-1 (cannot safely add columns without clean baseline)
+### Auth-0 — Drizzle Baseline Reconcile ✓ COMPLETE
+- Commits: `f620e1f` (archive old manual migration) + `f00f53b` (generate baseline SQL and journal)
+- Baseline: `0000_burly_black_bird.sql` — DO-NOT-APPLY phantom; Neon already has this schema
+- Rule: `drizzle-kit migrate` must not run until strategy is intentionally changed
+- Unblocks: Auth-1
 
-### Auth-1 — Auth Foundation
+### Auth-1A — Auth Columns Migration ✓ GENERATED — PENDING NEON APPLY
+- Migration: `lib/db/migrations/0001_auth_user_columns.sql`
+- Schema: `app_users.password_hash` (text nullable) + `app_users.last_login_at` (timestamptz nullable)
+- Apply: `ALTER TABLE "app_users" ADD COLUMN IF NOT EXISTS ...` — requires Marcel + Opus review before Neon apply
+- Safety scan: clean (no DROP/TRUNCATE/RENAME)
+
+### Auth-1B — Auth Foundation (BLOCKED until columns applied to Neon)
 - Auth.js / NextAuth v5, Credentials provider
 - Provisioned accounts only (no public signup)
-- Add `app_users.password_hash` (argon2id)
-- Add `app_users.last_login_at`
 - JWT session strategy: token carries `userId`, `businessId`, `role`
 
 ### Auth-2 — Protect Dashboard

@@ -60,3 +60,67 @@ The current system is demo-ready but not ready for real client data until auth, 
 | Auth-6 | Demo/admin controls | Guarded demo reset, preview route decision |
 
 ---
+
+## ADR-002 — Drizzle Migration Baseline Strategy (Auth-0)
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Establish a Drizzle migration baseline via file-only `db:generate` before implementing any auth schema changes.
+
+### Outcome
+
+- `0001_sprint3_platform.sql` (manual, untracked) moved to `lib/db/migrations/_archive/`
+- Drizzle baseline generated: `0000_burly_black_bird.sql` + `meta/_journal.json` + `meta/0000_snapshot.json`
+- Baseline is a **phantom** — schema already applied to Neon; this file must never be re-applied
+
+### Locked rules
+
+- `0000_burly_black_bird.sql` is DO-NOT-APPLY — Neon already has this schema
+- `drizzle-kit migrate` must not be used until migration tracking strategy is intentionally revisited
+- All future schema changes must go through `db:generate` → review → manual apply via `IF NOT EXISTS` SQL
+- Auth-1A migration (`0001_auth_user_columns.sql`) generated for review; not yet applied to Neon
+
+### Migration tracking note
+
+`db:generate` cannot run in the sandbox environment (esbuild IPC restriction). All future migration generation must be run locally by Marcel or executed via manual snapshot construction.
+
+---
+
+## ADR-003 — Auth-1A: App User Auth Columns
+
+**Date:** 2026-06-08
+**Status:** Migration generated — pending Neon apply
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Add two nullable columns to `app_users` as the foundation for Auth.js / NextAuth v5 Credentials provider:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `password_hash` | `text` nullable | argon2id hash of provisioned password |
+| `last_login_at` | `timestamp with time zone` nullable | Audit; detect stale accounts |
+
+### Migration file
+
+`lib/db/migrations/0001_auth_user_columns.sql`
+
+### Apply procedure (when approved)
+
+```sql
+ALTER TABLE "app_users" ADD COLUMN IF NOT EXISTS "password_hash" text;
+ALTER TABLE "app_users" ADD COLUMN IF NOT EXISTS "last_login_at" timestamp with time zone;
+```
+
+Use `IF NOT EXISTS` to make apply idempotent.
+
+### Blocked until
+
+Marcel and Opus review the migration SQL before any Neon apply.
+Auth-1B (NextAuth install) must not start until columns are confirmed in Neon.
+
+---
