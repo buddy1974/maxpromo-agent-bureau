@@ -3,6 +3,7 @@ import { requireApiBusinessId } from "@/lib/auth/api-guard";
 import { hasAIConfig } from "@/config/env";
 import { aiGenerateSchema } from "@/lib/validation/ai";
 import { generate } from "@/lib/ai/provider";
+import { checkRateLimit, AI_GENERATE_LIMIT } from "@/lib/security/rate-limit";
 
 // SAFETY: generates a DRAFT only. No DB write, no outbound message, no execution,
 // no external integration beyond the AI API call itself.
@@ -13,6 +14,11 @@ export async function POST(req: Request) {
   // Auth-3: gate the cost surface — no anonymous generation.
   const auth = await requireApiBusinessId();
   if (!auth.ok) return auth.response;
+
+  // Auth-4: rate-limit by userId. 10 req / 60s per authenticated user.
+  // WHY user-keyed (not IP): authenticated requests have a stable identity.
+  const rl = await checkRateLimit(`ai:${auth.user.id}`, AI_GENERATE_LIMIT);
+  if (!rl.ok) return apiError("rate_limited", 429);
 
   // Key is checked HERE (not at app boot) — dashboard builds without it.
   if (!hasAIConfig()) {

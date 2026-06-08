@@ -19,6 +19,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
+import { checkRateLimit, LOGIN_LIMIT } from "@/lib/security/rate-limit";
 
 export const authOptions: NextAuthOptions = {
   // ── Session ────────────────────────────────────────────────────────────────
@@ -55,6 +56,15 @@ export const authOptions: NextAuthOptions = {
        */
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Auth-4: rate-limit login attempts by email. 10 per 15 min.
+        // WHY email-keyed (not IP): credential stuffing targets accounts, not IPs.
+        // Fail-open on Redis error (checkRateLimit handles this internally).
+        const rl = await checkRateLimit(
+          `login:${credentials.email.toLowerCase().trim()}`,
+          LOGIN_LIMIT,
+        );
+        if (!rl.ok) return null; // NextAuth maps null → CredentialsSignin error → /login?error=
 
         const db = getDb();
         const rows = await db

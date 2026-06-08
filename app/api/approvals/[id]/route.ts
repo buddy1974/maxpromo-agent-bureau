@@ -7,6 +7,7 @@ import {
   createApprovalEvent,
 } from "@/lib/db/queries/approvals";
 import { createActivityLog } from "@/lib/db/queries/activity";
+import { checkRateLimit, APPROVALS_LIMIT } from "@/lib/security/rate-limit";
 import type { ApprovalStatus } from "@/types/agent";
 import type { ApprovalAction, ApprovalTransitionResult } from "@/types/approval";
 
@@ -30,15 +31,8 @@ const DECISION_NOTE: Record<ApprovalAction, string> = {
  * decision + audit trail; it NEVER executes the proposed real-world action,
  * sends messages, or calls external services.
  *
- * Auth-3: session required + ownership check.
- *   - 401 if no valid session
- *   - 403 if proposal.businessId does not match session.user.businessId (IDOR guard)
- *   - 404 if proposal not found (same shape whether businessId mismatch or missing)
- *
- * Transitions (only from `pending`):
- *   approve       -> approved
- *   reject        -> rejected
- *   mark_reviewed -> (status unchanged; records a review event)
+ * Auth-3: session required + businessId ownership check (IDOR-safe).
+ * Auth-4: rate-limited per authenticated user.
  */
 export async function PATCH(
   req: Request,
@@ -47,6 +41,10 @@ export async function PATCH(
   // Auth-3: require authenticated session before any mutation.
   const auth = await requireApiUser();
   if (!auth.ok) return auth.response;
+
+  // Auth-4: rate-limit by userId. 20 req / 60s per authenticated user.
+  const rl = await checkRateLimit(`approvals:${auth.user.id}`, APPROVALS_LIMIT);
+  if (!rl.ok) return apiError("rate_limited", 429);
 
   const { id } = await params;
 
@@ -72,9 +70,8 @@ export async function PATCH(
   try {
     const proposal = await getProposalById(id);
 
-    // Auth-3 ownership check: if the proposal exists but belongs to a different
-    // business, return 404 (not 403) — avoids leaking existence of other tenants'
-    // proposals. Only the owning business should know the proposal exists.
+    // Auth-3 ownership check: return 404 (not 403) on businessId mismatch —
+    // avoids leaking existence of other tenants' proposals (IDOR guard).
     if (!proposal || proposal.businessId !== auth.user.businessId) {
       return apiError("not_found", 404);
     }
@@ -105,8 +102,7 @@ export async function PATCH(
       note,
     });
 
-    // Activity log — actor name sourced from session (not hardcoded).
-    // WHY: Auth-3 requirement; ensures the audit trail reflects the real operator.
+    // Activity log — actorName sourced from session (not hardcoded).
     const actorName = auth.user.name ?? auth.user.email ?? "Operator";
     await createActivityLog({
       businessId: proposal.businessId,

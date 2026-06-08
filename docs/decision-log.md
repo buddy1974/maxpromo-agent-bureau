@@ -313,3 +313,61 @@ Protect all non-public API routes with session authentication and business owner
 |------|-------------|
 | No rate limiting (leads, AI, approvals, login) | Auth-4 |
 | All queries still use `getDemoBusinessId()` (demo session only) | Auth-5 |
+
+
+---
+
+## ADR-008 — Auth-4: API Rate Limiting
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Add fixed-window rate limiting to public and authenticated API routes using a custom abstraction (`lib/security/rate-limit.ts`) backed by Upstash Redis in production and an in-memory Map in local dev.
+
+### Why no Upstash package dependency
+
+No new npm package required. The Upstash REST API is a plain JSON HTTP endpoint. Direct `fetch` calls are sufficient and avoid adding a dependency + Edge compatibility concerns.
+
+### Files created
+
+| File | Purpose |
+|------|---------|
+| `lib/security/rate-limit.ts` | `checkRateLimit`, `getClientIp`, pre-configured limit constants |
+
+### Updated files
+
+| File | Change |
+|------|--------|
+| `app/api/leads/route.ts` | `checkRateLimit(\`leads:\${ip}\`, LEADS_LIMIT)` — 5/60s per IP |
+| `app/api/ai/generate/route.ts` | `checkRateLimit(\`ai:\${userId}\`, AI_GENERATE_LIMIT)` — 10/60s per user |
+| `app/api/approvals/[id]/route.ts` | `checkRateLimit(\`approvals:\${userId}\`, APPROVALS_LIMIT)` — 20/60s per user |
+| `auth.ts` | `checkRateLimit(\`login:\${email}\`, LOGIN_LIMIT)` in `authorize` callback — 10/900s per email |
+| `.env.example` | Added `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+
+### Rate limit configuration (single source of truth)
+
+| Route | Key | Limit | Window | Notes |
+|-------|-----|-------|--------|-------|
+| `POST /api/leads` | `leads:{ip}` | 5 | 60s | IP-keyed; unauthenticated |
+| `POST /api/ai/generate` | `ai:{userId}` | 10 | 60s | User-keyed; authenticated |
+| `PATCH /api/approvals/[id]` | `approvals:{userId}` | 20 | 60s | User-keyed; authenticated |
+| Login | `login:{email}` | 10 | 900s | Email-keyed; in authorize callback |
+
+### Locked rules
+
+- Rate limiter **fails open** on Redis errors — availability over strictness
+- In-memory fallback is for local dev only — not suitable for multi-instance production
+- All 429 responses return `{ ok: false, error: "rate_limited" }` (project envelope)
+- Rate limit check is first in handler execution — rejects before JSON parse / DB access
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` must be set in Vercel env before real client data is onboarded
+
+### Required production env vars
+
+```
+UPSTASH_REDIS_REST_URL=https://YOUR-DB.upstash.io
+UPSTASH_REDIS_REST_TOKEN=YOUR-TOKEN
+```
+Create a free Upstash Redis database at upstash.com → copy REST URL + token.

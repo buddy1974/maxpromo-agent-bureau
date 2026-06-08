@@ -3,15 +3,25 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { attribution, leadSubmissions } from "@/lib/db/schema";
 import { leadSchema } from "@/lib/validation/lead";
 import { notifyTelegram } from "@/lib/integrations/telegram/notify";
+import { checkRateLimit, getClientIp, LEADS_LIMIT } from "@/lib/security/rate-limit";
 
 // Neon HTTP driver runs on the Node runtime.
 export const runtime = "nodejs";
 
 /**
- * Public lead capture. Flow (anti-vibe-code): validate -> persist -> notify ->
- * typed result. No fake success: if persistence fails, the client is told.
+ * Public lead capture. Flow (anti-vibe-code): rate-limit -> validate -> persist
+ * -> notify -> typed result. No fake success: if persistence fails, the client
+ * is told.
  */
 export async function POST(req: Request) {
+  // Auth-4: rate-limit by IP before any processing. 5 req / 60s.
+  // WHY before JSON parse: rejects bots cheaply without body allocation.
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit(`leads:${ip}`, LEADS_LIMIT);
+  if (!rl.ok) {
+    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+  }
+
   // 1. Parse + validate (same schema the form uses).
   let body: unknown;
   try {

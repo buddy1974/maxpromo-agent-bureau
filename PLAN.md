@@ -448,10 +448,17 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - All dashboard GET APIs: session + businessId required
 - Public (unchanged): `/api/leads`, `/api/auth/**`, `/api/auth-status`
 
-### Auth-4 — Rate Limiting
-- Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
-- Apply rate limiting to: `POST /api/leads`, `POST /api/ai/generate`, `PATCH /api/approvals/[id]`, login attempts
-- `lib/auth/rate-limit.ts` wrapper created
+### Auth-4 — Rate Limiting ✓ COMPLETE
+
+**Commit:** Auth-4: add API rate limiting
+
+- `lib/security/rate-limit.ts` — fixed-window limiter, Upstash REST production, in-memory fallback for local dev
+- `POST /api/leads` — 5 req/60s per IP
+- `POST /api/ai/generate` — 10 req/60s per authenticated user
+- `PATCH /api/approvals/[id]` — 20 req/60s per authenticated user
+- Login (`auth.ts` authorize callback) — 10 attempts/900s per email
+- All 429 responses: `{ ok: false, error: "rate_limited" }`
+- Env: `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` required in production
 
 ### Auth-5 — Session Business Context
 - Remove `getDemoBusinessId()` runtime calls from all query files

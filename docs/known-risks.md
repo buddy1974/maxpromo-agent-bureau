@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-08 (Auth-3 complete)
+Last updated: 2026-06-08 (Auth-4 complete)
 
 ---
 
@@ -12,9 +12,11 @@ Last updated: 2026-06-08 (Auth-3 complete)
 | 2 | ~~`/api/ai/generate` is a public cost surface~~ | **RESOLVED — Auth-3 complete.** `requireApiBusinessId()` guard added. Unauthenticated requests receive 401. Rate limiting still pending (Auth-4). |
 | 3 | ~~`/api/approvals/[id]` is mutable without auth~~ | **RESOLVED — Auth-3 complete.** 401 if no session; businessId ownership check returns 404 (IDOR-safe); actorName sourced from session. |
 | 4 | No tenant isolation | All queries use `getDemoBusinessId()` — a name-based lookup returning the demo business. There is no session-derived `businessId`, no per-tenant access boundary. |
-| 5 | No rate limiting | No protection on any route against abuse, scraping, or cost attacks. |
+| 5 | ~~No rate limiting~~ | **RESOLVED — Auth-4 complete.** Fixed-window rate limiting added to `/api/leads` (5/60s IP), `/api/ai/generate` (10/60s user), `/api/approvals/[id]` (20/60s user), login (10/900s email). Upstash Redis in production; in-memory fallback for local dev. |
 
 **Rule:** Do not onboard real client data until Auth-1 through Auth-4 are complete.
+
+> ✅ Auth-1 through Auth-4 are now complete. Real client onboarding is unblocked (pending Auth-5 session business context).
 
 ---
 
