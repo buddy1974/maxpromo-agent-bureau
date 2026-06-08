@@ -1,11 +1,14 @@
 import { getAIConfig } from "@/config/env";
+import { generateWithAnthropic } from "./anthropic-provider";
 import { generateWithOpenAI } from "./openai-provider";
 import type { AIGenerationRequest, AIGenerationResult } from "./types";
 
 /**
- * Single entry point for AI generation. Selects the provider from env (OpenAI is
- * the default). Anthropic is a deliberate placeholder — not implemented this
- * sprint. Generation is draft-only; no provider executes external actions.
+ * Single entry point for AI generation. Selects the provider from AI_PROVIDER env.
+ * Default provider: anthropic (claude-sonnet-4-6).
+ * Fallback: openai (requires OPENAI_API_KEY + AI_PROVIDER=openai in env).
+ *
+ * Generation is DRAFT-ONLY — no provider executes external actions.
  */
 export async function generate(
   request: AIGenerationRequest,
@@ -13,11 +16,10 @@ export async function generate(
   const { provider } = getAIConfig();
 
   switch (provider) {
+    case "anthropic":
+      return generateWithAnthropic(request);
     case "openai":
       return generateWithOpenAI(request);
-    case "anthropic":
-      // Placeholder for premium/complex reasoning — wire in a later sprint.
-      return { ok: false, error: "ai_provider_not_implemented" };
     default:
       return { ok: false, error: "ai_provider_unknown" };
   }

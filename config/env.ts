@@ -12,14 +12,33 @@ export interface AIConfig {
   configured: boolean;
 }
 
-const DEFAULT_MODEL = "gpt-4.1-mini";
+// WHY Anthropic default: Agent Bureau runs on claude-sonnet-4-6. OpenAI kept as
+// opt-in fallback via AI_PROVIDER=openai env var.
+const DEFAULT_PROVIDER: AIProviderName = "anthropic";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 const DEFAULT_TEMPERATURE = 0.3;
 
-export function hasOpenAIConfig(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim());
+/** True when ANTHROPIC_API_KEY is set and non-empty. */
+export function hasAnthropicConfig(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 }
 
-export function getOpenAIModel(): string {
+/** True when OPENAI_API_KEY is set and non-empty (optional fallback). */
+export function hasOpenAIConfig(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY?.trim());
+}
+
+/**
+ * hasAIConfig — true when the active provider has its key set.
+ * Route handlers call this instead of provider-specific checks so switching
+ * providers via AI_PROVIDER env var requires no code changes.
+ */
+export function hasAIConfig(): boolean {
+  const provider = (process.env.AI_PROVIDER?.trim() as AIProviderName) || DEFAULT_PROVIDER;
+  return provider === "anthropic" ? hasAnthropicConfig() : hasOpenAIConfig();
+}
+
+export function getAIModel(): string {
   return process.env.AI_MODEL?.trim() || DEFAULT_MODEL;
 }
 
@@ -30,12 +49,11 @@ function getTemperature(): number {
 }
 
 export function getAIConfig(): AIConfig {
-  const provider = (process.env.AI_PROVIDER?.trim() as AIProviderName) || "openai";
-  // Only OpenAI is implemented; configured reflects the active provider's key.
-  const configured = provider === "openai" ? hasOpenAIConfig() : false;
+  const provider = (process.env.AI_PROVIDER?.trim() as AIProviderName) || DEFAULT_PROVIDER;
+  const configured = provider === "anthropic" ? hasAnthropicConfig() : hasOpenAIConfig();
   return {
     provider,
-    model: getOpenAIModel(),
+    model: getAIModel(),
     temperature: getTemperature(),
     configured,
   };
