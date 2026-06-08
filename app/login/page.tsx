@@ -1,0 +1,61 @@
+/**
+ * app/login/page.tsx
+ *
+ * Login page — server component wrapper.
+ * German UI, dark premium Maxpromo design.
+ * No public signup. Accounts are provisioned by Maxpromo.
+ *
+ * If already authenticated, redirect to dashboard.
+ * (Middleware will enforce this once Auth-2 is implemented;
+ * this getServerSession check is a courtesy redirect only.)
+ */
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/auth";
+import LoginForm from "@/components/auth/LoginForm";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Anmelden — Max Agent",
+  robots: "noindex, nofollow",
+};
+
+export default async function LoginPage() {
+  const session = await getServerSession(authOptions);
+  if (session) redirect("/dashboard");
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-ink-950 px-4">
+      {/* Subtle ambient glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent opacity-50"
+      />
+
+      <div className="relative z-10 w-full max-w-sm">
+        {/* Brand mark */}
+        <div className="mb-8 flex flex-col items-center gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+            // maxpromo digital
+          </span>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+            Max Agent
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Melden Sie sich an, um fortzufahren.
+          </p>
+        </div>
+
+        {/* Login card */}
+        <div className="rounded-xl border border-line bg-ink-900 p-6 shadow-xl shadow-black/40">
+          <LoginForm />
+        </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-700">
+          Maxpromo Digital · Essen · §19 UStG
+        </p>
+      </div>
+    </main>
+  );
+}

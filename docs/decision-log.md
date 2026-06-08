@@ -90,6 +90,50 @@ Establish a Drizzle migration baseline via file-only `db:generate` before implem
 
 ---
 
+## ADR-004 — Auth-1B: NextAuth Foundation
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+NextAuth v4.24.14 (not v5 — v4 is the installed version). JWT strategy. Credentials provider only.
+
+### Files created
+
+| File | Purpose |
+|------|---------|
+| `auth.ts` | NextAuth config — Credentials provider, JWT/session callbacks |
+| `app/api/auth/[...nextauth]/route.ts` | App Router handler (runtime: nodejs) |
+| `lib/auth/password.ts` | `hashPassword` / `verifyPassword` (argon2id) |
+| `lib/auth/session.ts` | `getCurrentUser`, `requireUser`, `AuthRequiredError` |
+| `lib/auth/tenancy.ts` | `getCurrentBusinessId`, `requireCurrentBusiness`, `requireBusinessAccess`, `BusinessAccessError` |
+| `types/next-auth.d.ts` | Module augmentation — adds `userId`, `businessId`, `role` to Session/JWT |
+| `app/login/page.tsx` | Login page (server component, German UI, dark premium) |
+| `components/auth/LoginForm.tsx` | Client island — `signIn("credentials")` call |
+| `components/auth/Providers.tsx` | `SessionProvider` wrapper for root layout |
+| `app/api/auth-status/route.ts` | GET — returns `{authenticated, user}` via API envelope |
+
+### Updated files
+
+| File | Change |
+|------|--------|
+| `app/layout.tsx` | Added `Providers` wrapper for SessionProvider |
+| `components/dashboard/Sidebar.tsx` | Added logout button (signOut → /login) |
+| `.env.example` | Added `AUTH_SECRET`, `NEXTAUTH_URL` |
+| `package.json` | Added `next-auth: ^4.24.14`, `argon2: ^0.44.0` to dependencies |
+
+### Locked rules
+
+- `runtime: "nodejs"` on all auth routes — argon2 native bindings are incompatible with Edge
+- Session maxAge: 8 hours (JWT)
+- `AUTH_SECRET` must never appear in NEXT_PUBLIC_ vars or be committed
+- No public signup — accounts provisioned by Maxpromo only
+- Error messages are deliberately vague to prevent user enumeration
+
+---
+
 ## ADR-003 — Auth-1A: App User Auth Columns
 
 **Date:** 2026-06-08

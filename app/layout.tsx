@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Providers from "@/components/auth/Providers";
 import "./globals.css";
 
 const sans = Inter({
@@ -46,7 +47,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

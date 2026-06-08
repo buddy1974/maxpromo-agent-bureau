@@ -393,16 +393,27 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - Rule: `drizzle-kit migrate` must not run until strategy is intentionally changed
 - Unblocks: Auth-1
 
-### Auth-1A — Auth Columns Migration ✓ GENERATED — PENDING NEON APPLY
+### Auth-1A — Auth Columns Migration ✓ APPLIED TO NEON
 - Migration: `lib/db/migrations/0001_auth_user_columns.sql`
 - Schema: `app_users.password_hash` (text nullable) + `app_users.last_login_at` (timestamptz nullable)
-- Apply: `ALTER TABLE "app_users" ADD COLUMN IF NOT EXISTS ...` — requires Marcel + Opus review before Neon apply
-- Safety scan: clean (no DROP/TRUNCATE/RENAME)
+- Columns confirmed live in Neon by Marcel.
 
-### Auth-1B — Auth Foundation (BLOCKED until columns applied to Neon)
-- Auth.js / NextAuth v5, Credentials provider
-- Provisioned accounts only (no public signup)
-- JWT session strategy: token carries `userId`, `businessId`, `role`
+### Auth-1B — Auth Foundation ✓ COMPLETE
+- next-auth@4.24.14 + argon2@0.44.0 installed; added to package.json
+- `auth.ts`: NextAuth config — Credentials provider, JWT callbacks, 8h session, argon2id verify
+- `app/api/auth/[...nextauth]/route.ts`: App Router handler (runtime: nodejs)
+- `lib/auth/password.ts`: hashPassword / verifyPassword (argon2id)
+- `lib/auth/session.ts`: getCurrentUser, requireUser, AuthRequiredError
+- `lib/auth/tenancy.ts`: getCurrentBusinessId, requireCurrentBusiness, requireBusinessAccess, BusinessAccessError
+- `types/next-auth.d.ts`: Session/User/JWT augmentation (userId, businessId, role)
+- `app/login/page.tsx`: Login page (server, German, dark premium, no public signup)
+- `components/auth/LoginForm.tsx`: signIn("credentials") client island
+- `components/auth/Providers.tsx`: SessionProvider root wrapper
+- `app/api/auth-status/route.ts`: GET → {authenticated, user} in API envelope
+- `app/layout.tsx`: Providers wrapper added
+- `components/dashboard/Sidebar.tsx`: logout button (signOut → /login)
+- `.env.example`: AUTH_SECRET, NEXTAUTH_URL added
+- **To complete**: add AUTH_SECRET + NEXTAUTH_URL to .env.local and Vercel env vars
 
 ### Auth-2 — Protect Dashboard
 - `middleware.ts` created; matcher covers `/dashboard/**`

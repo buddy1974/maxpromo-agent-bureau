@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 // Client component: needs the active path to highlight the current section.
 // Grouped: the backbone/operational-control items lead, then the supporting
@@ -70,10 +71,17 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t border-line p-4">
+      <div className="border-t border-line p-4 flex flex-col gap-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
           Supervised Mode
         </span>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-ink-850 hover:text-zinc-300 w-full"
+        >
+          <span className="w-4 text-center font-mono">⏻</span>
+          Abmelden
+        </button>
       </div>
     </aside>
   );

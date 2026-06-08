@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-08
+Last updated: 2026-06-08 (Auth-1B complete)
 
 ---
 
