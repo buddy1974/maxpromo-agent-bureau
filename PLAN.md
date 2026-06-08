@@ -383,6 +383,91 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 
 ---
 
+## Next Security Roadmap
+
+> **Rule:** Do not onboard real client data until Auth-1 through Auth-4 are complete.
+
+### Auth-0 — Drizzle Baseline Reconcile
+- Owner: Opus plan → Sonnet executes after approval
+- Goal: Reconcile Drizzle migration journal with current Neon schema state before any new migrations are applied
+- Method: `drizzle-kit pull` introspection, compare against journal, produce clean baseline
+- Blocks: Auth-1 (cannot safely add columns without clean baseline)
+
+### Auth-1 — Auth Foundation
+- Auth.js / NextAuth v5, Credentials provider
+- Provisioned accounts only (no public signup)
+- Add `app_users.password_hash` (argon2id)
+- Add `app_users.last_login_at`
+- JWT session strategy: token carries `userId`, `businessId`, `role`
+
+### Auth-2 — Protect Dashboard
+- `middleware.ts` created; matcher covers `/dashboard/**`
+- Login page (`/login`) created
+- Logout action
+- Session helper: `requireUser()` — redirect to `/login` if no session
+- All dashboard pages behind session check
+
+### Auth-3 — Protect APIs + Ownership Checks
+- `requireUser()` applied to all protected API routes
+- `requireBusinessAccess(businessId)` enforces tenant boundary
+- `PATCH /api/approvals/[id]` — ownership check: session `businessId` must match record
+- `GET /api/demo/status` — role check: admin/operator only
+- All other dashboard GET APIs: session + businessId scope
+
+### Auth-4 — Rate Limiting
+- Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- Apply rate limiting to: `POST /api/leads`, `POST /api/ai/generate`, `PATCH /api/approvals/[id]`, login attempts
+- `lib/auth/rate-limit.ts` wrapper created
+
+### Auth-5 — Session Business Context
+- Remove `getDemoBusinessId()` runtime calls from all query files
+- Replace with session-derived `businessId` passed from route handlers
+- `config/demo.ts` constants retired from application runtime (kept for seeding only)
+- Affected files: `lib/db/queries/activity.ts`, `agents.ts`, `approvals.ts`, `audit.ts`, `documents.ts`, `governance.ts`, `playbooks.ts`, `waiting-room.ts`, `app/api/demo/status/route.ts`
+
+### Auth-6 — Demo/Admin Controls + Preview Decision
+- Guarded demo reset endpoint (admin/operator role required)
+- Decision on public preview route (deferred from earlier sprints)
+- Vercel preview deployment protection review
+
+---
+
+## Document Package Agent — Capability Roadmap
+
+> Full definition: `docs/capability-document-package-agent.md`
+
+**Status:** Backlog / Post-auth module  
+**Do not build before:** Auth-1 through Auth-4 complete + session business context (Auth-5).
+
+### What it does
+Prepares review-ready document packages from scattered business data, files, forms, spreadsheets, and system records. Checks for missing fields, inconsistent data, required attachments, deadlines, and review risks. Does not send, certify, or submit anything without human approval.
+
+### Pattern
+Scattered business data → AI prepares complete package → AI checks gaps → human approves → package delivered/logged.
+
+### Broad use cases
+Tax preparation · Client onboarding · Insurance claims · Tender/application · Supplier delivery · HR onboarding · Technical/admin packages (e.g. machine shop COC-style review packages pulling QuickBooks + Excel + heat numbers + inspection notes)
+
+### Positioning line
+*From scattered files and business data to approval-ready packages.*
+
+### Service name (consulting)
+Document Package Automation
+
+### Implementation stages (all post-auth)
+| Stage | Description |
+|---|---|
+| 1 | Manual package checklist + AI draft in AI Lab |
+| 2 | Create package proposal into Approval Desk |
+| 3 | Document intake with upload and OCR |
+| 4 | Integrations with business tools and spreadsheets |
+| 5 | Package export and delivery under approval |
+
+### Training simulations (future — no UI yet)
+Chief of Staff · Document Package Agent · Operations Agent · Governance Agent · Follow-Up Agent · Approval Desk · AI Lab draft-to-proposal · Client discovery call with objections
+
+---
+
 ## Version 2 Backlog
 Not to be implemented now — captured for sequencing after the platform is wired to real data:
 
