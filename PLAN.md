@@ -415,6 +415,15 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - `.env.example`: AUTH_SECRET, NEXTAUTH_URL added
 - **To complete**: add AUTH_SECRET + NEXTAUTH_URL to .env.local and Vercel env vars
 
+### Auth-1C — Operator Provisioning Script ✓ COMPLETE
+- `scripts/provision-operator-user.mjs`: one-off local script to hash + store operator credentials
+- Reads DATABASE_URL, OPERATOR_EMAIL, OPERATOR_PASSWORD, OPERATOR_NAME from env
+- Finds demo business by name; fails safely if not found
+- Upserts app_users row with argon2id hash; idempotent
+- Never logs password or hash; prints safe summary only
+- `package.json`: added `auth:provision-operator` npm script
+- **To run**: set OPERATOR_EMAIL + OPERATOR_PASSWORD in `.env.local`, then `npm run auth:provision-operator`
+
 ### Auth-2 — Protect Dashboard
 - `middleware.ts` created; matcher covers `/dashboard/**`
 - Login page (`/login`) created

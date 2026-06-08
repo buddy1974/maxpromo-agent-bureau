@@ -168,3 +168,40 @@ Marcel and Opus review the migration SQL before any Neon apply.
 Auth-1B (NextAuth install) must not start until columns are confirmed in Neon.
 
 ---
+
+---
+
+## ADR-005 — Auth-1C: Operator Provisioning Script
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Create a local one-off provisioning script (`scripts/provision-operator-user.mjs`) to hash and store credentials for the first operator user (Marcel) in the demo business.
+
+### Rationale
+
+Auth-1B delivers the auth foundation (NextAuth, password helpers, login page) but cannot function without at least one provisioned account. A dedicated local script keeps provisioning:
+- Explicit (not automatic, not part of the seed)
+- Auditable (logged to stdout with safe summary only)
+- Repeatable (idempotent — safe to re-run to rotate credentials)
+- Separate from the application codebase (lives in `scripts/`, not app routes)
+
+### Locked rules
+
+- Script MUST be run locally by Marcel only — never in CI, never on Vercel
+- OPERATOR_PASSWORD is read from env; never logged or stored plain
+- password_hash is never logged
+- Script fails safely if demo business is not found (never creates a business)
+- Role is "owner" per ADR-001 provisioned account convention; admin/operator roles deferred to Auth-6
+- Script uses same argon2id settings as `lib/auth/password.ts` (memoryCost: 65536, timeCost: 3, parallelism: 1)
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `scripts/provision-operator-user.mjs` | Provisioning script |
+| `package.json` | Added `auth:provision-operator` npm script |
+

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs generate",
     "db:push": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs push",
-    "db:seed:demo": "node --env-file=.env.local lib/seed/run-demo-seed.mjs"
+    "db:seed:demo": "node --env-file=.env.local lib/seed/run-demo-seed.mjs",
+    "auth:provision-operator": "node --env-file=.env.local scripts/provision-operator-user.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
