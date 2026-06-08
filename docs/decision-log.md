@@ -205,3 +205,34 @@ Auth-1B delivers the auth foundation (NextAuth, password helpers, login page) bu
 | `scripts/provision-operator-user.mjs` | Provisioning script |
 | `package.json` | Added `auth:provision-operator` npm script |
 
+
+---
+
+## ADR-006 — Auth-2: Dashboard Middleware Protection
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Use NextAuth v4 `withAuth` middleware in `middleware.ts` to protect `/dashboard/:path*` behind a valid JWT session. Unauthenticated requests redirect to `/login?callbackUrl=<original path>`.
+
+### Locked rules
+
+- Matcher covers `/dashboard/:path*` only
+- API routes remain unprotected until Auth-3
+- `withAuth` reads `AUTH_SECRET` (via `NEXTAUTH_SECRET ?? AUTH_SECRET` fallback — confirmed in middleware source)
+- `authorized` callback: `!!token` — presence of valid JWT is the only Auth-2 requirement. Role/tenant checks are Auth-3.
+- `/api/auth/**` must never be in the matcher (would break NextAuth own endpoints)
+- `/api/leads`, `/api/auth-status` must remain public
+
+### Open risks post Auth-2
+
+| Route | Risk | Resolved by |
+|-------|------|-------------|
+| `/api/ai/generate` | Open cost surface | Auth-3 + Auth-4 |
+| `/api/approvals/[id]` | Mutable without auth | Auth-3 |
+| All other `/api/**` | Unprotected reads | Auth-3 |
+| No tenant isolation in queries | All queries use getDemoBusinessId() | Auth-5 |
+

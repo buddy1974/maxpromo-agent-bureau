@@ -424,12 +424,16 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - `package.json`: added `auth:provision-operator` npm script
 - **To run**: set OPERATOR_EMAIL + OPERATOR_PASSWORD in `.env.local`, then `npm run auth:provision-operator`
 
-### Auth-2 — Protect Dashboard
-- `middleware.ts` created; matcher covers `/dashboard/**`
-- Login page (`/login`) created
-- Logout action
-- Session helper: `requireUser()` — redirect to `/login` if no session
-- All dashboard pages behind session check
+### Auth-2 — Protect Dashboard ✓ COMPLETE
+- `middleware.ts`: `withAuth` from `next-auth/middleware`, matcher `/dashboard/:path*`
+- Unauthenticated → `/login?callbackUrl=<path>` (automatic via withAuth)
+- Authenticated → request passes through; no role check at middleware level
+- Login page already redirects authenticated users → `/dashboard` (Auth-1B)
+- Logout button in Sidebar (Auth-1B, signOut → /login)
+- `requireUser()` / `requireCurrentBusiness()` helpers in `lib/auth/session.ts` + `tenancy.ts` (Auth-1B, ready for Auth-3)
+- **API routes remain unprotected — Auth-3 next**
+- `/api/ai/generate` remains open cost surface — Auth-3/Auth-4
+- `/api/approvals/[id]` remains mutable without auth — Auth-3
 
 ### Auth-3 — Protect APIs + Ownership Checks
 - `requireUser()` applied to all protected API routes

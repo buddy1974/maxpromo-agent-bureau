@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-08 (Auth-1C complete)
+Last updated: 2026-06-08 (Auth-2 complete)
 
 ---
 
@@ -8,7 +8,7 @@ Last updated: 2026-06-08 (Auth-1C complete)
 
 | # | Risk | Detail |
 |---|------|--------|
-| 1 | Dashboard routes are public | All `/dashboard/**` pages are accessible without authentication. Any person with the URL can view the full dashboard. |
+| 1 | ~~Dashboard routes are public~~ | **RESOLVED — Auth-2 complete.** `middleware.ts` with `withAuth` protects `/dashboard/:path*`. Unauthenticated requests redirect to `/login?callbackUrl=<path>`. |
 | 2 | `/api/ai/generate` is a public cost surface | Anyone who discovers the endpoint can trigger OpenAI calls at Maxpromo's expense. No auth, no rate limiting. |
 | 3 | `/api/approvals/[id]` is mutable without auth | PATCH mutations on approval decisions require no session, no ownership check. Any caller can approve or reject. |
 | 4 | No tenant isolation | All queries use `getDemoBusinessId()` — a name-based lookup returning the demo business. There is no session-derived `businessId`, no per-tenant access boundary. |
