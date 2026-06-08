@@ -1,16 +1,21 @@
 import { apiOk, apiError } from "@/lib/api/response";
-import { hasOpenAIConfig } from "@/config/env";
+import { requireApiBusinessId } from "@/lib/auth/api-guard";
+import { hasAIConfig } from "@/config/env";
 import { aiGenerateSchema } from "@/lib/validation/ai";
 import { generate } from "@/lib/ai/provider";
 
 // SAFETY: generates a DRAFT only. No DB write, no outbound message, no execution,
-// no external integration beyond the OpenAI API call itself.
+// no external integration beyond the AI API call itself.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // Auth-3: gate the cost surface — no anonymous generation.
+  const auth = await requireApiBusinessId();
+  if (!auth.ok) return auth.response;
+
   // Key is checked HERE (not at app boot) — dashboard builds without it.
-  if (!hasOpenAIConfig()) {
+  if (!hasAIConfig()) {
     return apiError("ai_not_configured", 503);
   }
 

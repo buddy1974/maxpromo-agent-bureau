@@ -1,6 +1,6 @@
 # Route Protection Matrix — Maxpromo Agent Bureau
 
-Last updated: 2026-06-05
+Last updated: 2026-06-08 (Auth-3 complete)
 
 ---
 
@@ -38,26 +38,26 @@ Last updated: 2026-06-05
 | Route | Method | Current Status | Target Status | Protection Needed | Notes |
 |-------|--------|---------------|---------------|-------------------|-------|
 | `/api/leads` | POST | Public | Public + rate-limited | Rate limit only | Lead capture must stay public |
-| `/api/dashboard/summary` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/agents` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/agents/[id]` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/activity` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/ai-governance` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/approvals` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/approvals/[id]` | PATCH | Public (no auth) | Protected + ownership + rate-limited | Auth session + ownership check + rate limit | **Critical: currently writable without auth** |
-| `/api/audit` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/client-implementation` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/contacts` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/documents` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/memory` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/operating-model` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/playbooks` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/projects` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/tasks` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/waiting-room` | GET | Public (no auth) | Protected | Auth session + businessId scope | |
-| `/api/ai/status` | GET | Public (no auth) | Protected | Auth session required | |
-| `/api/ai/generate` | POST | Public (no auth) | Protected + rate-limited | Auth session + rate limit | **Critical: currently an open cost surface** |
-| `/api/demo/status` | GET | Public (no auth) | Protected (admin/operator only) | Auth session + role check (admin/operator) | Must not be accessible to standard tenant users |
+| `/api/dashboard/summary` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/agents` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/agents/[id]` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/activity` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/ai-governance` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/approvals` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/approvals/[id]` | PATCH | **Protected (Auth-3)** | Protected + rate-limited | `requireApiUser()` + businessId ownership (IDOR-safe 404) + actorName from session | ✓ Rate limit pending Auth-4 |
+| `/api/audit` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/client-implementation` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/contacts` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/documents` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/memory` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/operating-model` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/playbooks` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/projects` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/tasks` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/waiting-room` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/ai/status` | GET | **Protected (Auth-3)** | Protected | `requireApiBusinessId()` | ✓ |
+| `/api/ai/generate` | POST | **Protected (Auth-3)** | Protected + rate-limited | `requireApiBusinessId()` | ✓ Rate limit pending Auth-4 |
+| `/api/demo/status` | GET | **Protected (Auth-3)** | Protected (owner/operator) | `requireApiUser()` + role check (owner/operator) | ✓ |
 
 ---
 

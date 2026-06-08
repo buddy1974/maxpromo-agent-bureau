@@ -435,12 +435,18 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - `/api/ai/generate` remains open cost surface — Auth-3/Auth-4
 - `/api/approvals/[id]` remains mutable without auth — Auth-3
 
-### Auth-3 — Protect APIs + Ownership Checks
-- `requireUser()` applied to all protected API routes
-- `requireBusinessAccess(businessId)` enforces tenant boundary
-- `PATCH /api/approvals/[id]` — ownership check: session `businessId` must match record
-- `GET /api/demo/status` — role check: admin/operator only
-- All other dashboard GET APIs: session + businessId scope
+### Auth-3 — Protect APIs + Ownership Checks ✓ COMPLETE
+
+**Commit:** Auth-3: protect API routes + ownership checks
+
+- `lib/auth/api-guard.ts` — `requireApiUser`, `requireApiBusinessId`, `assertBusinessAccess`, `unauthorizedResponse`, `forbiddenResponse`
+- 19 API route files updated with auth guards
+- `POST /api/ai/generate` — gated (no anonymous OpenAI cost surface)
+- `GET /api/ai/status` — gated
+- `PATCH /api/approvals/[id]` — 401 if no session; 404 if businessId mismatch (IDOR guard); actorName from session (not hardcoded)
+- `GET /api/demo/status` — owner/operator role check
+- All dashboard GET APIs: session + businessId required
+- Public (unchanged): `/api/leads`, `/api/auth/**`, `/api/auth-status`
 
 ### Auth-4 — Rate Limiting
 - Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`

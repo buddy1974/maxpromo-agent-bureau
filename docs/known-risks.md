@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-08 (Auth-2 complete)
+Last updated: 2026-06-08 (Auth-3 complete)
 
 ---
 
@@ -9,8 +9,8 @@ Last updated: 2026-06-08 (Auth-2 complete)
 | # | Risk | Detail |
 |---|------|--------|
 | 1 | ~~Dashboard routes are public~~ | **RESOLVED — Auth-2 complete.** `middleware.ts` with `withAuth` protects `/dashboard/:path*`. Unauthenticated requests redirect to `/login?callbackUrl=<path>`. |
-| 2 | `/api/ai/generate` is a public cost surface | Anyone who discovers the endpoint can trigger OpenAI calls at Maxpromo's expense. No auth, no rate limiting. |
-| 3 | `/api/approvals/[id]` is mutable without auth | PATCH mutations on approval decisions require no session, no ownership check. Any caller can approve or reject. |
+| 2 | ~~`/api/ai/generate` is a public cost surface~~ | **RESOLVED — Auth-3 complete.** `requireApiBusinessId()` guard added. Unauthenticated requests receive 401. Rate limiting still pending (Auth-4). |
+| 3 | ~~`/api/approvals/[id]` is mutable without auth~~ | **RESOLVED — Auth-3 complete.** 401 if no session; businessId ownership check returns 404 (IDOR-safe); actorName sourced from session. |
 | 4 | No tenant isolation | All queries use `getDemoBusinessId()` — a name-based lookup returning the demo business. There is no session-derived `businessId`, no per-tenant access boundary. |
 | 5 | No rate limiting | No protection on any route against abuse, scraping, or cost attacks. |
 

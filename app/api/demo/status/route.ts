@@ -1,5 +1,6 @@
 import { sql, eq } from "drizzle-orm";
-import { apiOk } from "@/lib/api/response";
+import { apiOk, apiError } from "@/lib/api/response";
+import { requireApiUser } from "@/lib/auth/api-guard";
 import { getDb } from "@/lib/db";
 import {
   agents,
@@ -12,10 +13,20 @@ import {
 import { getDemoBusinessId, safeRead } from "@/lib/db/queries/_shared";
 
 // Read-only demo workspace status. GET only — no writes, no reset, no delete.
+// Auth-3: owner/operator role required (demo status is internal tooling).
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // Auth-3: authenticated session required; owner/operator role check.
+  const auth = await requireApiUser();
+  if (!auth.ok) return auth.response;
+
+  // Only owner and operator roles can view demo workspace status.
+  if (auth.user.role !== "owner" && auth.user.role !== "operator") {
+    return apiError("forbidden", 403);
+  }
+
   const data = await safeRead(
     async () => {
       const businessId = await getDemoBusinessId();

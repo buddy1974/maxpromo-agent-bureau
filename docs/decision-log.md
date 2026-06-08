@@ -236,3 +236,80 @@ Use NextAuth v4 `withAuth` middleware in `middleware.ts` to protect `/dashboard/
 | All other `/api/**` | Unprotected reads | Auth-3 |
 | No tenant isolation in queries | All queries use getDemoBusinessId() | Auth-5 |
 
+
+
+---
+
+## ADR-007 — Auth-3: API Route Protection + Ownership Checks
+
+**Date:** 2026-06-08
+**Status:** Complete
+**Owner:** Marcel Tabit Akwe (Product Owner)
+
+### Decision
+
+Protect all non-public API routes with session authentication and business ownership checks using a dedicated guard module (`lib/auth/api-guard.ts`).
+
+### Files created
+
+| File | Purpose |
+|------|---------|
+| `lib/auth/api-guard.ts` | `requireApiUser`, `requireApiBusinessId`, `assertBusinessAccess`, `unauthorizedResponse`, `forbiddenResponse` |
+
+### Updated files (19 route handlers)
+
+| Route | Change |
+|-------|--------|
+| `app/api/ai/generate/route.ts` | `requireApiBusinessId()` guard — closes OpenAI cost surface |
+| `app/api/ai/status/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/demo/status/route.ts` | `requireApiUser()` + owner/operator role check |
+| `app/api/approvals/[id]/route.ts` | `requireApiUser()` + businessId ownership check (404-on-mismatch IDOR guard) + actorName from session |
+| `app/api/approvals/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/activity/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/agents/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/agents/[id]/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/ai-governance/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/audit/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/client-implementation/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/contacts/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/dashboard/summary/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/documents/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/memory/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/operating-model/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/playbooks/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/projects/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/tasks/route.ts` | `requireApiBusinessId()` guard |
+| `app/api/waiting-room/route.ts` | `requireApiBusinessId()` guard |
+
+### Public routes (intentionally unchanged)
+
+| Route | Reason |
+|-------|--------|
+| `POST /api/leads` | Lead capture from public landing page — must remain open |
+| `GET/POST /api/auth/**` | NextAuth endpoints — must never be in middleware matcher |
+| `GET /api/auth-status` | Session polling / health check — safe read-only |
+
+### Locked rules
+
+- Guard pattern: return-instead-of-throw for route handlers (no try/catch boilerplate at 20+ call sites)
+- `PATCH /api/approvals/[id]` returns 404 (not 403) on businessId mismatch — IDOR-safe (no tenant existence leak)
+- `actorName` in activity logs sourced from `session.user.name ?? session.user.email` (not hardcoded)
+- All newly guarded routes that lacked `runtime = "nodejs"` had it added — required by argon2 import chain via auth.ts
+- `GET /api/demo/status` requires `role === "owner" || role === "operator"` (internal tooling, not for future client users)
+
+### Route protection matrix
+
+| Layer | Protected by |
+|-------|-------------|
+| `/dashboard/**` pages | Auth-2: `middleware.ts` + `withAuth` (JWT redirect) |
+| All `/api/**` except public routes | Auth-3: `requireApiBusinessId()` in route handler (401 JSON) |
+| `/api/approvals/[id]` PATCH | Auth-3: session auth + businessId ownership check (IDOR guard) |
+| `/api/demo/status` | Auth-3: session auth + owner/operator role check |
+| `/api/leads`, `/api/auth/**`, `/api/auth-status` | Public — intentionally open |
+
+### Open risks post Auth-3
+
+| Risk | Resolved by |
+|------|-------------|
+| No rate limiting (leads, AI, approvals, login) | Auth-4 |
+| All queries still use `getDemoBusinessId()` (demo session only) | Auth-5 |
