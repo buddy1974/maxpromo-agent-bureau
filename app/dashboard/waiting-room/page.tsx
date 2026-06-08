@@ -1,14 +1,20 @@
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { WaitingRoomQueue } from "@/components/dashboard/WaitingRoomQueue";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { getWaitingRoom } from "@/lib/db/queries/waiting-room";
+import { getCurrentUser } from "@/lib/auth/session";
 import type { WaitingRoomItem } from "@/types/waiting-room";
 
 // Module 2 — Customer Waiting Room. DB-backed. Prepared responses only; nothing sent.
 export const dynamic = "force-dynamic";
 
 export default async function WaitingRoomPage() {
-  const rows = await getWaitingRoom();
+  // Auth-5: source businessId from session — no global demo lookup.
+  const user = await getCurrentUser();
+  if (!user?.businessId) redirect("/login");
+
+  const rows = await getWaitingRoom(user.businessId);
 
   // Map DB rows -> WaitingRoomItem (table has no approvalStatus/businessImpact cols).
   const items: WaitingRoomItem[] = rows.map((w) => ({

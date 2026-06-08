@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DocumentIntakeCard } from "@/components/dashboard/DocumentIntakeCard";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { getDocuments } from "@/lib/db/queries/documents";
+import { getCurrentUser } from "@/lib/auth/session";
 import type { DocumentIntakeItem } from "@/types/document-intake";
 
 // Module 4 — Document Intake Desk. DB-backed. No OCR/upload pipeline; summaries
@@ -9,7 +11,11 @@ import type { DocumentIntakeItem } from "@/types/document-intake";
 export const dynamic = "force-dynamic";
 
 export default async function DocumentsPage() {
-  const rows = await getDocuments();
+  // Auth-5: source businessId from session — no global demo lookup.
+  const user = await getCurrentUser();
+  if (!user?.businessId) redirect("/login");
+
+  const rows = await getDocuments(user.businessId);
 
   const items: DocumentIntakeItem[] = rows.map((d) => ({
     id: d.id,

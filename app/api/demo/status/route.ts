@@ -10,37 +10,28 @@ import {
   playbooks,
   activityLogs,
 } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "@/lib/db/queries/_shared";
+import { safeRead } from "@/lib/db/queries/_shared";
 
 // Read-only demo workspace status. GET only — no writes, no reset, no delete.
-// Auth-3: owner/operator role required (demo status is internal tooling).
+// Auth-3: owner/operator role required (internal tooling).
+// Auth-5: businessId sourced from session — no global demo lookup.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Auth-3: authenticated session required; owner/operator role check.
   const auth = await requireApiUser();
   if (!auth.ok) return auth.response;
 
-  // Only owner and operator roles can view demo workspace status.
+  // Only owner and operator roles can view workspace status.
   if (auth.user.role !== "owner" && auth.user.role !== "operator") {
     return apiError("forbidden", 403);
   }
 
+  // Auth-5: use session businessId directly — no getDemoBusinessId() lookup.
+  const businessId = auth.user.businessId;
+
   const data = await safeRead(
     async () => {
-      const businessId = await getDemoBusinessId();
-      if (!businessId) {
-        return {
-          businessExists: false,
-          agents: 0,
-          proposals: 0,
-          waitingRoom: 0,
-          documents: 0,
-          playbooks: 0,
-          activityLogs: 0,
-        };
-      }
       const db = getDb();
       const n = sql<number>`count(*)::int`;
       const [a, p, w, d, pb, act] = await Promise.all([

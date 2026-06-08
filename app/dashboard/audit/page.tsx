@@ -1,19 +1,25 @@
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { AuditFindingCard } from "@/components/dashboard/AuditFindingCard";
 import { AuditPriorityMatrix } from "@/components/dashboard/AuditPriorityMatrix";
 import { AgentRecommendationCard } from "@/components/dashboard/AgentRecommendationCard";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { getAuditOverview } from "@/lib/db/queries/audit";
+import { getCurrentUser } from "@/lib/auth/session";
 import { AGENT_RECOMMENDATIONS } from "@/lib/core/operating-model";
 import type { AuditFinding, AuditPriority } from "@/types/audit";
 import type { AgentRiskLevel } from "@/types/agent";
 import type { OperatingStageKey } from "@/types/operating-model";
 
-// Module 1 — AI Audit Console. DB-backed (demo workspace).
+// Module 1 — AI Audit Console. DB-backed (session workspace).
 export const dynamic = "force-dynamic";
 
 export default async function AuditConsolePage() {
-  const { session, findings } = await getAuditOverview();
+  // Auth-5: source businessId from session — no global demo lookup.
+  const user = await getCurrentUser();
+  if (!user?.businessId) redirect("/login");
+
+  const { session, findings } = await getAuditOverview(user.businessId);
 
   if (!session) {
     return (

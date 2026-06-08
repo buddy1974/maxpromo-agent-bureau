@@ -460,7 +460,7 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 - All 429 responses: `{ ok: false, error: "rate_limited" }`
 - Env: `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` required in production
 
-### Auth-5 — Session Business Context
+### Auth-5 — Session Business Context ✓ COMPLETE
 - Remove `getDemoBusinessId()` runtime calls from all query files
 - Replace with session-derived `businessId` passed from route handlers
 - `config/demo.ts` constants retired from application runtime (kept for seeding only)
@@ -478,7 +478,9 @@ On "go", Sprint 1 delivers: Next.js skeleton + public `(marketing)` Hybrid landi
 > Full definition: `docs/capability-document-package-agent.md`
 
 **Status:** Backlog / Post-auth module  
-**Do not build before:** Auth-1 through Auth-4 complete + session business context (Auth-5).
+**Do not build before:** Auth-1 through Auth-5 complete.
+
+> ✅ Auth-1 through Auth-5 complete. Platform is tenant-isolated and production-safe for first real client onboarding.
 
 ### What it does
 Prepares review-ready document packages from scattered business data, files, forms, spreadsheets, and system records. Checks for missing fields, inconsistent data, required attachments, deadlines, and review risks. Does not send, certify, or submit anything without human approval.

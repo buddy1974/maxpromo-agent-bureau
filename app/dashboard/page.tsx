@@ -1,18 +1,24 @@
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { BriefingPanel } from "@/components/dashboard/BriefingPanel";
 import { ApprovalCard } from "@/components/dashboard/ApprovalCard";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { getDashboardData } from "@/lib/db/queries/dashboard";
+import { getCurrentUser } from "@/lib/auth/session";
 import type { AgentProposal } from "@/types/agent";
 import type { ActivityLog } from "@/types/activity";
 import type { DailyBriefing } from "@/types/dashboard";
 
-// DB-backed (demo workspace). force-dynamic so the build never queries Neon.
+// DB-backed (session workspace). force-dynamic so the build never queries Neon.
 export const dynamic = "force-dynamic";
 
 export default async function DashboardOverviewPage() {
-  const data = await getDashboardData();
+  // Auth-5: source businessId from session — no global demo lookup.
+  const user = await getCurrentUser();
+  if (!user?.businessId) redirect("/login");
+
+  const data = await getDashboardData(user.businessId);
 
   if (data.empty) {
     return (

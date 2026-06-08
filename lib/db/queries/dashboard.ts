@@ -10,19 +10,20 @@ export interface DashboardData {
   activity: Awaited<ReturnType<typeof getActivity>>;
   waiting: Awaited<ReturnType<typeof getWaitingRoom>>;
   audit: Awaited<ReturnType<typeof getAuditOverview>>;
-  /** True when the demo workspace has no data yet (prompt to run the seed). */
+  /** True when the business has no data yet (prompt to run the seed). */
   empty: boolean;
 }
 
 // Read-only composite for the overview page. Each underlying query is already
 // resilient (returns empty on no-DB / no-seed), so this never throws.
-export async function getDashboardData(): Promise<DashboardData> {
+// Auth-5: businessId sourced from caller's session — not a global demo lookup.
+export async function getDashboardData(businessId: string): Promise<DashboardData> {
   const [agents, proposals, activity, waiting, audit] = await Promise.all([
-    getAgents(),
-    getProposals(),
-    getActivity(8),
-    getWaitingRoom(),
-    getAuditOverview(),
+    getAgents(businessId),
+    getProposals(businessId),
+    getActivity(businessId, 8),
+    getWaitingRoom(businessId),
+    getAuditOverview(businessId),
   ]);
   const empty =
     agents.length === 0 &&

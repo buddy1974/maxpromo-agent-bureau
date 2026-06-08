@@ -1,17 +1,15 @@
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { playbooks, playbookSteps } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
 export type PlaybookWithSteps = typeof playbooks.$inferSelect & {
   steps: (typeof playbookSteps.$inferSelect)[];
 };
 
-// Read-only. Playbooks + steps for the demo workspace.
-export async function getPlaybooks(): Promise<PlaybookWithSteps[]> {
+// Read-only. Playbooks + steps for the caller's business (Auth-5: session-scoped).
+export async function getPlaybooks(businessId: string): Promise<PlaybookWithSteps[]> {
   return safeRead(async () => {
-    const businessId = await getDemoBusinessId();
-    if (!businessId) return [];
     const db = getDb();
     const books = await db
       .select()

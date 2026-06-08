@@ -5,7 +5,7 @@ import {
   aiGovernanceRisks,
   aiPolicyChecklists,
 } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
 export interface GovernanceData {
   tools: (typeof aiToolRegister.$inferSelect)[];
@@ -13,12 +13,10 @@ export interface GovernanceData {
   policy: (typeof aiPolicyChecklists.$inferSelect)[];
 }
 
-// Read-only. Governance assessment data for the demo workspace.
-export async function getGovernance(): Promise<GovernanceData> {
+// Read-only. Governance assessment data for the caller's business (Auth-5: session-scoped).
+export async function getGovernance(businessId: string): Promise<GovernanceData> {
   return safeRead(
     async () => {
-      const businessId = await getDemoBusinessId();
-      if (!businessId) return { tools: [], risks: [], policy: [] };
       const db = getDb();
       const [tools, risks, policy] = await Promise.all([
         db.select().from(aiToolRegister).where(eq(aiToolRegister.businessId, businessId)),

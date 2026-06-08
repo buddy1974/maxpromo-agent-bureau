@@ -371,3 +371,41 @@ UPSTASH_REDIS_REST_URL=https://YOUR-DB.upstash.io
 UPSTASH_REDIS_REST_TOKEN=YOUR-TOKEN
 ```
 Create a free Upstash Redis database at upstash.com → copy REST URL + token.
+
+---
+
+## ADR-009 — Auth-5: Tenant Isolation via Session businessId
+
+**Date:** 2026-06-08
+**Status:** Accepted
+**Sprint:** Auth-5
+
+### Context
+
+All protected API read queries called `getDemoBusinessId()` — a name-based lookup
+that returns the single demo business. This is not safe for multi-tenant usage:
+any authenticated user would read the same business data regardless of which
+business their session belongs to.
+
+### Decision
+
+1. Each query function in `lib/db/queries/` now accepts `businessId: string` as
+   an explicit parameter and passes it to the Drizzle `where` clause.
+2. Route handlers source `businessId` from `requireApiBusinessId()` (the Auth-3
+   guard), which reads `session.user.businessId`.
+3. `getDemoBusinessId()` is retained in `lib/db/queries/_shared.ts` for backward
+   compat with seed scripts only — it is never called from route handlers.
+4. `app/api/demo/status/route.ts` updated: `auth.user.businessId` replaces the
+   `getDemoBusinessId()` call.
+
+### Query files updated
+
+`activity`, `agents`, `approvals`, `audit`, `dashboard`, `documents`,
+`governance`, `playbooks`, `waiting-room`
+
+### Consequences
+
+- Cross-tenant data leakage is structurally prevented in the query layer.
+- TypeScript enforces `businessId` presence — callers cannot omit it.
+- Seed scripts are unaffected (they call `getDemoBusinessId()` directly).
+- Risk 4 in `known-risks.md` is resolved.

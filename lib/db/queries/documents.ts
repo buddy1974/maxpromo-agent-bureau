@@ -1,17 +1,15 @@
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { documentIntakeItems, documentRequiredActions } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
 export type DocumentWithActions = typeof documentIntakeItems.$inferSelect & {
   requiredActions: (typeof documentRequiredActions.$inferSelect)[];
 };
 
-// Read-only. Documents + their required actions for the demo workspace.
-export async function getDocuments(): Promise<DocumentWithActions[]> {
+// Read-only. Documents + required actions for the caller's business (Auth-5: session-scoped).
+export async function getDocuments(businessId: string): Promise<DocumentWithActions[]> {
   return safeRead(async () => {
-    const businessId = await getDemoBusinessId();
-    if (!businessId) return [];
     const db = getDb();
     const docs = await db
       .select()

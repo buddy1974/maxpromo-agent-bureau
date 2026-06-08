@@ -1,13 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { activityLogs } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
-// Read-only. Most recent activity for the demo workspace.
-export async function getActivity(limit = 20) {
+// Read-only. Most recent activity for the caller's business (Auth-5: session-scoped).
+export async function getActivity(businessId: string, limit = 20) {
   return safeRead(async () => {
-    const businessId = await getDemoBusinessId();
-    if (!businessId) return [];
     const db = getDb();
     return db
       .select()
@@ -18,7 +16,7 @@ export async function getActivity(limit = 20) {
   }, [] as (typeof activityLogs.$inferSelect)[]);
 }
 
-// ── Write helper (Sprint 5) ─────────────────────────────────────────────────
+// ── Write helper ─────────────────────────────────────────────────────────────
 // Records a single activity-log entry. Used by the approval workflow. Errors
 // propagate (no safeRead) so the caller can decide how to handle them.
 export interface ActivityLogInput {

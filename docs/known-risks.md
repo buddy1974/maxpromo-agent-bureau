@@ -1,6 +1,6 @@
 # Known Risks — Maxpromo Agent Bureau
 
-Last updated: 2026-06-08 (Auth-4 complete)
+Last updated: 2026-06-08 (Auth-5 complete)
 
 ---
 
@@ -11,12 +11,12 @@ Last updated: 2026-06-08 (Auth-4 complete)
 | 1 | ~~Dashboard routes are public~~ | **RESOLVED — Auth-2 complete.** `middleware.ts` with `withAuth` protects `/dashboard/:path*`. Unauthenticated requests redirect to `/login?callbackUrl=<path>`. |
 | 2 | ~~`/api/ai/generate` is a public cost surface~~ | **RESOLVED — Auth-3 complete.** `requireApiBusinessId()` guard added. Unauthenticated requests receive 401. Rate limiting still pending (Auth-4). |
 | 3 | ~~`/api/approvals/[id]` is mutable without auth~~ | **RESOLVED — Auth-3 complete.** 401 if no session; businessId ownership check returns 404 (IDOR-safe); actorName sourced from session. |
-| 4 | No tenant isolation | All queries use `getDemoBusinessId()` — a name-based lookup returning the demo business. There is no session-derived `businessId`, no per-tenant access boundary. |
+| 4 | ~~No tenant isolation~~ | **RESOLVED — Auth-5 complete.** All read queries now accept `businessId: string` sourced from `session.user.businessId`. `getDemoBusinessId()` removed from all route paths; retained in `_shared.ts` for seed scripts only. |
 | 5 | ~~No rate limiting~~ | **RESOLVED — Auth-4 complete.** Fixed-window rate limiting added to `/api/leads` (5/60s IP), `/api/ai/generate` (10/60s user), `/api/approvals/[id]` (20/60s user), login (10/900s email). Upstash Redis in production; in-memory fallback for local dev. |
 
-**Rule:** Do not onboard real client data until Auth-1 through Auth-4 are complete.
+**Rule:** Do not onboard real client data until Auth-1 through Auth-5 are complete.
 
-> ✅ Auth-1 through Auth-4 are now complete. Real client onboarding is unblocked (pending Auth-5 session business context).
+> ✅ Auth-1 through Auth-5 are now complete. Tenant isolation is enforced. Real client onboarding is unblocked.
 
 ---
 
@@ -38,7 +38,7 @@ Last updated: 2026-06-08 (Auth-4 complete)
 |---|------|--------|
 | 11 | Manual password reset only | During concierge onboarding, password reset will be manual (Maxpromo-operator action). Self-serve reset deferred. Acceptable while user count is small. |
 | 12 | No MFA | Single-factor auth only in Auth-1. MFA deferred. |
-| 13 | Demo workspace depends on name lookup at runtime | `getDemoBusinessId()` uses `DEMO_BUSINESS_NAME` string lookup in all query files. Must be replaced with session `businessId` in Auth-5. |
+| 13 | ~~Demo workspace depends on name lookup at runtime~~ | **RESOLVED — Auth-5 complete.** `getDemoBusinessId()` removed from all route query calls. Session `businessId` used throughout. |
 | 14 | Some dashboard pages still use config/mock data | Dashboard modules sourced from static config or mock queries. Must be verified against live Neon data before client onboarding. |
 | 15 | Mobile dashboard nav needs improvement | Current sidebar/nav layout has known mobile UX gaps. Not a security risk, but noted for pre-launch readiness. |
 

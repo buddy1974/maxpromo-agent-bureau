@@ -6,9 +6,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Auth-3: require authenticated session before returning playbooks.
   const auth = await requireApiBusinessId();
   if (!auth.ok) return auth.response;
-
-  return apiOk(await getPlaybooks());
+  // Auth-5: scope to session businessId — no global demo lookup.
+  return apiOk(await getPlaybooks(auth.businessId));
 }

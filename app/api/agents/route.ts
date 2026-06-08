@@ -6,9 +6,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Auth-3: require authenticated session before returning agent registry.
   const auth = await requireApiBusinessId();
   if (!auth.ok) return auth.response;
-
-  return apiOk(await getAgents());
+  // Auth-5: scope to session businessId — no global demo lookup.
+  return apiOk(await getAgents(auth.businessId));
 }

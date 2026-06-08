@@ -1,15 +1,21 @@
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import { ApprovalActions } from "@/components/dashboard/ApprovalActions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { getProposals } from "@/lib/db/queries/approvals";
+import { getCurrentUser } from "@/lib/auth/session";
 
 // Module 3 — Approval Desk. DB-backed + interactive (Sprint 5).
 // Approving records a decision + audit trail only — no real-world execution.
 export const dynamic = "force-dynamic";
 
 export default async function ApprovalsPage() {
-  const rows = await getProposals();
+  // Auth-5: source businessId from session — no global demo lookup.
+  const user = await getCurrentUser();
+  if (!user?.businessId) redirect("/login");
+
+  const rows = await getProposals(user.businessId);
   // Show pending first, then decided (so the queue reads naturally).
   const ordered = [...rows].sort((a, b) =>
     a.status === b.status ? 0 : a.status === "pending" ? -1 : 1,

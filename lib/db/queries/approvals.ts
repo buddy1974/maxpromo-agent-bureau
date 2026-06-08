@@ -3,13 +3,11 @@ import { getDb } from "@/lib/db";
 import { agentProposals, approvalEvents } from "@/lib/db/schema";
 import type { ApprovalStatus } from "@/types/agent";
 import type { ApprovalEventInput } from "@/types/approval";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
-// Read-only. Pending agent proposals (the approval queue) for the demo workspace.
-export async function getProposals() {
+// Read-only. Pending agent proposals for the caller's business (Auth-5: session-scoped).
+export async function getProposals(businessId: string) {
   return safeRead(async () => {
-    const businessId = await getDemoBusinessId();
-    if (!businessId) return [];
     const db = getDb();
     return db
       .select()
@@ -18,7 +16,7 @@ export async function getProposals() {
   }, [] as (typeof agentProposals.$inferSelect)[]);
 }
 
-// ── Write helpers (Sprint 5) ────────────────────────────────────────────────
+// ── Write helpers ─────────────────────────────────────────────────────────────
 // These run inside the PATCH route and intentionally do NOT use safeRead — real
 // errors must surface to the API so failures aren't masked as success.
 

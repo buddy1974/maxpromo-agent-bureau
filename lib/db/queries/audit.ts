@@ -1,14 +1,12 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { auditSessions, auditFindings } from "@/lib/db/schema";
-import { getDemoBusinessId, safeRead } from "./_shared";
+import { safeRead } from "./_shared";
 
-// Read-only. Latest demo audit session + its findings.
-export async function getAuditOverview() {
+// Read-only. Latest audit session + findings for the caller's business (Auth-5: session-scoped).
+export async function getAuditOverview(businessId: string) {
   return safeRead(
     async () => {
-      const businessId = await getDemoBusinessId();
-      if (!businessId) return { session: null, findings: [] };
       const db = getDb();
       const [session] = await db
         .select()
